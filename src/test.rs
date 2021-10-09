@@ -1,6 +1,7 @@
 use crate::ser::Serializer;
 use serde::de::{self, DeserializeOwned};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
@@ -22,6 +23,8 @@ category!(double, f64);
 category!(boolean, bool);
 category!(binary, Base64Binary);
 category!(null, ());
+category!(list, Vec<String>);
+category!(map, HashMap<String, i32>);
 
 fn run_category<T>(name: &str)
 where

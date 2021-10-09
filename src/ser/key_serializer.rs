@@ -76,7 +76,7 @@ where
                 .write_u8(0x80 + v.len() as u8 - 1)
                 .map_err(Error::io)?;
             self.ser.writer.write_all(v.as_bytes()).map_err(Error::io)?;
-        } else if v.len() <= 57 {
+        } else if v.len() < 57 {
             self.ser
                 .writer
                 .write_u8(0xc0 + v.len() as u8 - 2)

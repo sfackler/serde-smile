@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,6 +35,10 @@ public final class EncodeReferences {
         processTestCases("binary", new TypeReference<TestCase<byte[]>>() {
         });
         processTestCases("null", new TypeReference<TestCase<Object>>() {
+        });
+        processTestCases("list", new TypeReference<TestCase<List<String>>>() {
+        });
+        processTestCases("map", new TypeReference<TestCase<Map<String, Integer>>>() {
         });
     }
 

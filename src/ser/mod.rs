@@ -309,7 +309,7 @@ where
     fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
         let zigzag = ((v << 1) ^ (v >> 31)) as u32 as u64;
 
-        if zigzag <= 32 {
+        if zigzag < 32 {
             self.writer.write_u8(0xc0 + zigzag as u8).map_err(Error::io)
         } else {
             self.writer.write_u8(0x24).map_err(Error::io)?;
