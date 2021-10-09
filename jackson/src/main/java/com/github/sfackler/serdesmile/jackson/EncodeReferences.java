@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator.Feature;
 import com.fasterxml.jackson.dataformat.smile.databind.SmileMapper;
-import com.github.sfackler.serdesmile.TestCase;
+import com.github.sfackler.serdesmile.jackson.TestCase;
 
 public final class EncodeReferences {
     private static ObjectMapper JSON_MAPPER = new ObjectMapper();

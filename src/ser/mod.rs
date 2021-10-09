@@ -77,10 +77,7 @@ pub struct Serializer<W> {
     shared_properties: Option<StringCache>,
 }
 
-impl<W> Serializer<W>
-where
-    W: Write,
-{
+impl Serializer<()> {
     pub fn builder() -> Builder {
         Builder {
             raw_binary: true,
@@ -88,9 +85,14 @@ where
             shared_properties: true,
         }
     }
+}
 
+impl<W> Serializer<W>
+where
+    W: Write,
+{
     pub fn new(writer: W) -> Result<Self, Error> {
-        Self::builder().build(writer)
+        Serializer::builder().build(writer)
     }
 
     pub fn into_inner(self) -> W {
@@ -299,9 +301,14 @@ where
     }
 
     fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
-        self.writer.write_u8(0x24).map_err(Error::io)?;
-        let v = v as u32;
-        self.serialize_vint(u64::from((v << 1) ^ (v >> 31)))
+        let zigzag = ((v << 1) ^ (v >> 31)) as u32 as u64;
+
+        if zigzag <= 32 {
+            self.writer.write_u8(0xc0 + zigzag as u8).map_err(Error::io)
+        } else {
+            self.writer.write_u8(0x24).map_err(Error::io)?;
+            self.serialize_vint(zigzag)
+        }
     }
 
     fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error> {
@@ -309,8 +316,8 @@ where
             Ok(v) => self.serialize_i32(v),
             Err(_) => {
                 self.writer.write_u8(0x25).map_err(Error::io)?;
-                let v = v as u64;
-                self.serialize_vint((v << 1) ^ (v >> 63))
+                let zigzag = ((v << 1) ^ (v >> 63)) as u64;
+                self.serialize_vint(zigzag)
             }
         }
     }
