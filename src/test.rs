@@ -19,6 +19,7 @@ category!(long, i64);
 category!(string, String);
 category!(float, f32);
 category!(double, f64);
+category!(boolean, bool);
 
 fn run_category<T>(name: &str)
 where

@@ -29,6 +29,8 @@ public final class EncodeReferences {
         });
         processTestCases("double", new TypeReference<TestCase<Double>>() {
         });
+        processTestCases("boolean", new TypeReference<TestCase<Boolean>>() {
+        });
     }
 
     private static <T> void processTestCases(String category, TypeReference<TestCase<T>> type) throws IOException {
