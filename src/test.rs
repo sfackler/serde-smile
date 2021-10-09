@@ -16,6 +16,7 @@ macro_rules! category {
 
 category!(integer, i32);
 category!(long, i64);
+category!(string, String);
 
 fn run_category<T>(name: &str)
 where

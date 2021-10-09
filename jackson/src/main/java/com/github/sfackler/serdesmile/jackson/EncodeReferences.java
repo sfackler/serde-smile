@@ -23,6 +23,8 @@ public final class EncodeReferences {
         });
         processTestCases("long", new TypeReference<TestCase<Long>>() {
         });
+        processTestCases("string", new TypeReference<TestCase<String>>() {
+        });
     }
 
     private static <T> void processTestCases(String category, TypeReference<TestCase<T>> type) throws IOException {

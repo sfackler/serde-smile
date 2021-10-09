@@ -1,4 +1,4 @@
-package com.github.sfackler.serdesmile;
+package com.github.sfackler.serdesmile.jackson;
 
 public final class TestCase<T> {
     public boolean rawBinary;

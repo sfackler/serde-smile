@@ -404,26 +404,38 @@ where
             return Ok(());
         }
 
-        let (tiny, short, long) = if v.is_ascii() {
-            (0x40, 0x60, 0xe0)
+        if v.is_ascii() {
+            if v.len() <= 32 {
+                self.writer
+                    .write_u8(0x40 + v.len() as u8 - 1)
+                    .map_err(Error::io)?;
+                self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
+            } else if v.len() <= 64 {
+                self.writer
+                    .write_u8(0x60 + v.len() as u8 - 33)
+                    .map_err(Error::io)?;
+                self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
+            } else {
+                self.writer.write_u8(0xe0).map_err(Error::io)?;
+                self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
+                self.writer.write_u8(0xfc).map_err(Error::io)?;
+            }
         } else {
-            (0x80, 0xa0, 0xe4)
-        };
-
-        if v.len() <= 32 {
-            self.writer
-                .write_u8(tiny | (v.len() as u8 - 1))
-                .map_err(Error::io)?;
-            self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
-        } else if v.len() <= 64 {
-            self.writer
-                .write_u8(short | (v.len() as u8 - 33))
-                .map_err(Error::io)?;
-            self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
-        } else {
-            self.writer.write_u8(long).map_err(Error::io)?;
-            self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
-            self.writer.write_u8(0xfc).map_err(Error::io)?;
+            if v.len() <= 33 {
+                self.writer
+                    .write_u8(0x80 + v.len() as u8 - 2)
+                    .map_err(Error::io)?;
+                self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
+            } else if v.len() <= 64 {
+                self.writer
+                    .write_u8(0xa0 + v.len() as u8 - 34)
+                    .map_err(Error::io)?;
+                self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
+            } else {
+                self.writer.write_u8(0xe4).map_err(Error::io)?;
+                self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
+                self.writer.write_u8(0xfc).map_err(Error::io)?;
+            }
         }
 
         Ok(())
