@@ -25,6 +25,10 @@ public final class EncodeReferences {
         });
         processTestCases("string", new TypeReference<TestCase<String>>() {
         });
+        processTestCases("float", new TypeReference<TestCase<Float>>() {
+        });
+        processTestCases("double", new TypeReference<TestCase<Double>>() {
+        });
     }
 
     private static <T> void processTestCases(String category, TypeReference<TestCase<T>> type) throws IOException {

@@ -359,34 +359,35 @@ where
         }
     }
 
-    // we could use serialize_7_bit_binary here, but working directly with the integer representation is a bit faster
+    // to match with the Java implementation, we encode floats with sign extension and doubles without!
+    // https://github.com/FasterXML/jackson-dataformats-binary/issues/300
     fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
-        let bits = v.to_bits().to_le();
+        let bits = v.to_bits() as i32;
         let buf = [
             0x28,
-            bits as u8 & 0x7f,
-            (bits >> 7) as u8 & 0x7f,
-            (bits >> 14) as u8 & 0x7f,
-            (bits >> 21) as u8 & 0x7f,
             (bits >> 28) as u8 & 0x7f,
+            (bits >> 21) as u8 & 0x7f,
+            (bits >> 14) as u8 & 0x7f,
+            (bits >> 7) as u8 & 0x7f,
+            bits as u8 & 0x7f,
         ];
         self.writer.write_all(&buf).map_err(Error::io)
     }
 
     fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error> {
-        let bits = v.to_bits().to_le();
+        let bits = v.to_bits();
         let buf = [
             0x29,
-            bits as u8 & 0x7f,
-            (bits >> 7) as u8 & 0x7f,
-            (bits >> 14) as u8 & 0x7f,
-            (bits >> 21) as u8 & 0x7f,
-            (bits >> 28) as u8 & 0x7f,
-            (bits >> 35) as u8 & 0x7f,
-            (bits >> 42) as u8 & 0x7f,
-            (bits >> 49) as u8 & 0x7f,
-            (bits >> 56) as u8 & 0x7f,
             (bits >> 63) as u8 & 0x7f,
+            (bits >> 56) as u8 & 0x7f,
+            (bits >> 49) as u8 & 0x7f,
+            (bits >> 42) as u8 & 0x7f,
+            (bits >> 35) as u8 & 0x7f,
+            (bits >> 28) as u8 & 0x7f,
+            (bits >> 21) as u8 & 0x7f,
+            (bits >> 14) as u8 & 0x7f,
+            (bits >> 7) as u8 & 0x7f,
+            bits as u8 & 0x7f,
         ];
         self.writer.write_all(&buf).map_err(Error::io)
     }
