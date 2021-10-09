@@ -1,0 +1,9 @@
+[package]
+name = "serde-smile"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+byteorder = "1"
+itoa = { version = "0.4", features = ["i128"] }
+serde = "1"
