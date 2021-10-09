@@ -1,5 +1,5 @@
 use crate::ser::Serializer;
-use serde::de::DeserializeOwned;
+use serde::de::{self, DeserializeOwned};
 use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
 use std::fs;
@@ -20,6 +20,7 @@ category!(string, String);
 category!(float, f32);
 category!(double, f64);
 category!(boolean, bool);
+category!(binary, Base64Binary);
 
 fn run_category<T>(name: &str)
 where
@@ -74,4 +75,28 @@ struct TestCase<T> {
     #[serde(default)]
     write_end_marker: bool,
     value: T,
+}
+
+// serde-json doesn't use base64 for binary so we need a shim
+struct Base64Binary(Vec<u8>);
+
+impl Serialize for Base64Binary {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for Base64Binary {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        base64::decode(&s)
+            .map(Base64Binary)
+            .map_err(|e| de::Error::custom(e))
+    }
 }

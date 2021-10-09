@@ -245,14 +245,20 @@ where
             self.writer.write_all(&buf).map_err(Error::io)?;
         }
 
+        if it.remainder().is_empty() {
+            return Ok(());
+        }
+
         let mut buf = [0; 7];
+        let len = it.remainder().len();
+
         for (i, &b) in it.remainder().iter().enumerate() {
             buf[i] |= b >> (i + 1);
             buf[i + 1] = (b << (6 - i)) & 0x7f;
         }
-        self.writer
-            .write_all(&buf[..it.remainder().len() + 1])
-            .map_err(Error::io)
+        // the last byte is annoyingly not actually shifted to its normal place
+        buf[len] >>= 7 - len;
+        self.writer.write_all(&buf[..len + 1]).map_err(Error::io)
     }
 
     fn serialize_big_integer(&mut self, v: &[u8]) -> Result<(), Error> {
