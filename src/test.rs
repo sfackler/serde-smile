@@ -21,6 +21,7 @@ category!(float, f32);
 category!(double, f64);
 category!(boolean, bool);
 category!(binary, Base64Binary);
+category!(null, ());
 
 fn run_category<T>(name: &str)
 where

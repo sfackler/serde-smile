@@ -33,6 +33,8 @@ public final class EncodeReferences {
         });
         processTestCases("binary", new TypeReference<TestCase<byte[]>>() {
         });
+        processTestCases("null", new TypeReference<TestCase<Object>>() {
+        });
     }
 
     private static <T> void processTestCases(String category, TypeReference<TestCase<T>> type) throws IOException {
