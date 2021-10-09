@@ -2,6 +2,7 @@
 name = "serde-smile"
 version = "0.1.0"
 edition = "2018"
+exclude = ["jackson"]
 
 [dependencies]
 byteorder = "1"

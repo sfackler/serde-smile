@@ -1,0 +1,16 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.13.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.0'
+}
+
+application {
+    mainClass = 'com.github.sfackler.serdesmile.jackson.EncodeReferences'
+}
