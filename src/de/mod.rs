@@ -3,7 +3,7 @@ use crate::de::read::{Buf, MutBuf};
 pub use crate::de::read::{IoRead, MutSliceRead, Read, SliceRead};
 use crate::de::string_cache::StringCache;
 use crate::Error;
-use serde::de::{self, Visitor};
+use serde::de::{self, DeserializeOwned, Visitor};
 use serde::{Deserialize, Deserializer as _};
 use std::borrow::Cow;
 use std::convert::TryFrom;
@@ -13,6 +13,37 @@ use std::str;
 mod key_deserializer;
 mod read;
 mod string_cache;
+
+pub fn from_slice<'de, T>(slice: &'de [u8]) -> Result<T, Error>
+where
+    T: Deserialize<'de>,
+{
+    let mut de = Deserializer::from_slice(slice)?;
+    let value = T::deserialize(&mut de)?;
+    de.end()?;
+    Ok(value)
+}
+
+pub fn from_mut_slice<'de, T>(slice: &'de mut [u8]) -> Result<T, Error>
+where
+    T: Deserialize<'de>,
+{
+    let mut de = Deserializer::from_mut_slice(slice)?;
+    let value = T::deserialize(&mut de)?;
+    de.end()?;
+    Ok(value)
+}
+
+pub fn from_reader<T, R>(reader: R) -> Result<T, Error>
+where
+    T: DeserializeOwned,
+    R: BufRead,
+{
+    let mut de = Deserializer::from_reader(reader)?;
+    let value = T::deserialize(&mut de)?;
+    de.end()?;
+    Ok(value)
+}
 
 pub struct Deserializer<'de, R> {
     reader: R,
@@ -121,9 +152,12 @@ where
         let mut value = 0;
         for _ in 0..byte_limit {
             let byte = self.parse_u8()?;
-            value = value << 7 | byte as u64 & 0x7f;
+            let end = byte & 0x80 != 0;
 
-            if byte & 0x80 != 0 {
+            let shift = if end { 6 } else { 7 };
+            value = value << shift | byte as u64 & 0x7f;
+
+            if end {
                 return Ok(value);
             }
         }
@@ -181,8 +215,13 @@ where
             out_base += 7;
         }
 
-        for i in 0..(remainder as usize) {
-            buf[out_base + i] = buf[in_base + i] << i | buf[in_base + i + 1] >> 6 - i;
+        if remainder > 0 {
+            // the last byte is annoyingly right-aligned
+            buf[in_base + remainder as usize] <<= 7 - remainder as usize;
+
+            for i in 0..(remainder as usize) {
+                buf[out_base + i] = buf[in_base + i] << i + 1 | buf[in_base + i + 1] >> 6 - i;
+            }
         }
 
         let out = match buf {

@@ -2,7 +2,9 @@ use crate::ser::Serializer;
 use linked_hash_map::LinkedHashMap;
 use serde::de::{self, DeserializeOwned};
 use serde::{Deserialize, Serialize};
+use serde_bytes::ByteBuf;
 use std::ffi::OsStr;
+use std::fmt::Debug;
 use std::fs;
 use std::path::Path;
 
@@ -30,7 +32,7 @@ category!(shared_string, Vec<LinkedHashMap<String, String>>);
 
 fn run_category<T>(name: &str)
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + PartialEq + Debug,
 {
     for r in fs::read_dir(format!("tests/{}", name)).unwrap() {
         let path = r.unwrap().path();
@@ -44,14 +46,14 @@ where
 
 fn run_test<T>(path: &Path)
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + PartialEq + Debug,
 {
     println!("testing {}", path.display());
 
     let test_case = fs::read(path).unwrap();
     let test_case = serde_json::from_slice::<TestCase<T>>(&test_case).unwrap();
 
-    let expected = fs::read(path.with_extension("smile")).unwrap();
+    let mut expected = fs::read(path.with_extension("smile")).unwrap();
 
     let mut serializer = Serializer::builder()
         .raw_binary(test_case.raw_binary)
@@ -67,6 +69,15 @@ where
     };
 
     assert_eq!(expected, actual);
+
+    let actual = crate::from_slice::<T>(&expected).unwrap();
+    assert_eq!(test_case.value, actual);
+
+    let actual = crate::from_reader::<T, _>(&*expected).unwrap();
+    assert_eq!(test_case.value, actual);
+
+    let actual = crate::from_mut_slice::<T>(&mut expected).unwrap();
+    assert_eq!(test_case.value, actual);
 }
 
 #[derive(Deserialize)]
@@ -84,6 +95,7 @@ struct TestCase<T> {
 }
 
 // serde-json doesn't use base64 for binary so we need a shim
+#[derive(PartialEq, Debug)]
 struct Base64Binary(Vec<u8>);
 
 impl Serialize for Base64Binary {
@@ -100,9 +112,13 @@ impl<'de> Deserialize<'de> for Base64Binary {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        base64::decode(&s)
-            .map(Base64Binary)
-            .map_err(|e| de::Error::custom(e))
+        if deserializer.is_human_readable() {
+            let s = String::deserialize(deserializer)?;
+            base64::decode(&s)
+                .map(Base64Binary)
+                .map_err(|e| de::Error::custom(e))
+        } else {
+            ByteBuf::deserialize(deserializer).map(|v| Base64Binary(v.into_vec()))
+        }
     }
 }

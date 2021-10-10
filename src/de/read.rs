@@ -113,7 +113,7 @@ impl<'de> Read<'de> for SliceRead<'de> {
     #[inline]
     fn read<'a>(&'a mut self, n: usize) -> Result<Option<Buf<'a, 'de>>, Error> {
         let s = &self.slice[self.index..];
-        if n < s.len() {
+        if n <= s.len() {
             self.index += n;
             Ok(Some(Buf::Long(&s[..n])))
         } else {
@@ -123,7 +123,7 @@ impl<'de> Read<'de> for SliceRead<'de> {
 
     fn read_mut<'a>(&'a mut self, n: usize) -> Result<Option<MutBuf<'a, 'de>>, Error> {
         let s = &self.slice[self.index..];
-        if n < s.len() {
+        if n <= s.len() {
             self.index += n;
             self.buf.clear();
             self.buf.extend_from_slice(&s[..n]);
@@ -184,7 +184,7 @@ impl<'de> Read<'de> for MutSliceRead<'de> {
     }
 
     fn read<'a>(&'a mut self, n: usize) -> Result<Option<Buf<'a, 'de>>, Error> {
-        if n < self.slice.len() {
+        if n <= self.slice.len() {
             let (a, b) = mem::replace(&mut self.slice, &mut []).split_at_mut(n);
             self.slice = b;
             Ok(Some(Buf::Long(a)))
@@ -194,7 +194,7 @@ impl<'de> Read<'de> for MutSliceRead<'de> {
     }
 
     fn read_mut<'a>(&'a mut self, n: usize) -> Result<Option<MutBuf<'a, 'de>>, Error> {
-        if n < self.slice.len() {
+        if n <= self.slice.len() {
             let (a, b) = mem::replace(&mut self.slice, &mut []).split_at_mut(n);
             self.slice = b;
             Ok(Some(MutBuf::Long(a)))
@@ -244,7 +244,7 @@ where
             }
 
             let len = usize::min(remaining, buf.len());
-            self.buf.extend_from_slice(buf);
+            self.buf.extend_from_slice(&buf[..len]);
             self.reader.consume(len);
             remaining -= len;
         }
