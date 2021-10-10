@@ -26,6 +26,7 @@ category!(null, ());
 category!(list, Vec<String>);
 category!(map, LinkedHashMap<String, i32>);
 category!(shared_property, Vec<LinkedHashMap<String, i32>>);
+category!(shared_string, Vec<LinkedHashMap<String, String>>);
 
 fn run_category<T>(name: &str)
 where
