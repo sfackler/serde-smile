@@ -40,6 +40,8 @@ public final class EncodeReferences {
         });
         processTestCases("map", new TypeReference<TestCase<Map<String, Integer>>>() {
         });
+        processTestCases("shared_property", new TypeReference<TestCase<List<Map<String, Integer>>>>() {
+        });
     }
 
     private static <T> void processTestCases(String category, TypeReference<TestCase<T>> type) throws IOException {

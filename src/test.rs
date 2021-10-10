@@ -1,7 +1,7 @@
 use crate::ser::Serializer;
+use linked_hash_map::LinkedHashMap;
 use serde::de::{self, DeserializeOwned};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
@@ -24,7 +24,8 @@ category!(boolean, bool);
 category!(binary, Base64Binary);
 category!(null, ());
 category!(list, Vec<String>);
-category!(map, HashMap<String, i32>);
+category!(map, LinkedHashMap<String, i32>);
+category!(shared_property, Vec<LinkedHashMap<String, i32>>);
 
 fn run_category<T>(name: &str)
 where
