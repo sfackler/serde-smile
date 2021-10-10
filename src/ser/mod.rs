@@ -80,7 +80,7 @@ pub struct Serializer<W> {
 impl Serializer<()> {
     pub fn builder() -> Builder {
         Builder {
-            raw_binary: true,
+            raw_binary: false,
             shared_strings: false,
             shared_properties: true,
         }
