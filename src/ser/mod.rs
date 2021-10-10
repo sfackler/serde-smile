@@ -14,6 +14,24 @@ use std::io::Write;
 mod key_serializer;
 mod string_cache;
 
+pub fn to_vec<T>(value: &T) -> Result<Vec<u8>, Error>
+where
+    T: Serialize + ?Sized,
+{
+    let mut buf = vec![];
+    to_writer(&mut buf, value)?;
+    Ok(buf)
+}
+
+pub fn to_writer<W, T>(writer: W, value: &T) -> Result<(), Error>
+where
+    W: Write,
+    T: ?Sized + Serialize,
+{
+    let mut serializer = Serializer::new(writer)?;
+    value.serialize(&mut serializer)
+}
+
 pub struct Builder {
     raw_binary: bool,
     shared_strings: bool,

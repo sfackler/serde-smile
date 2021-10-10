@@ -9,16 +9,22 @@ pub(crate) mod private {
 }
 
 pub trait Read<'de>: private::Sealed {
+    #[doc(hidden)]
     fn next(&mut self) -> Result<Option<u8>, Error>;
 
+    #[doc(hidden)]
     fn peek(&mut self) -> Result<Option<u8>, Error>;
 
+    #[doc(hidden)]
     fn consume(&mut self);
 
+    #[doc(hidden)]
     fn read<'a>(&'a mut self, n: usize) -> Result<Option<Buf<'a, 'de>>, Error>;
 
+    #[doc(hidden)]
     fn read_mut<'a>(&'a mut self, n: usize) -> Result<Option<MutBuf<'a, 'de>>, Error>;
 
+    #[doc(hidden)]
     fn read_until<'a>(&'a mut self, end: u8) -> Result<Option<Buf<'a, 'de>>, Error>;
 }
 
@@ -280,6 +286,8 @@ where
         self.reader.consume(1);
     }
 
+    // FIXME ideally we'd be able to avoid a copy by directly referencing the reader's buffer when it has enough data
+    // but that would require some kind of deferred consume handling.
     fn read<'a>(&'a mut self, n: usize) -> Result<Option<Buf<'a, 'de>>, Error> {
         if self.fill_buf(n)? {
             Ok(Some(Buf::Short(&self.buf)))
