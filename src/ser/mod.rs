@@ -316,15 +316,25 @@ where
     fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error> {
         match i64::try_from(v) {
             Ok(v) => self.serialize_i64(v),
-            Err(_) => self.serialize_big_integer(&v.to_be_bytes()),
+            Err(_) => {
+                // we need an extra byte for the sign bit
+                let mut buf = [0; 9];
+                buf[1..].copy_from_slice(&v.to_be_bytes());
+                self.serialize_big_integer(&buf)
+            }
         }
     }
 
     serde_if_integer128! {
         fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
-            match i64::try_from(v) {
-                Ok(v) => self.serialize_i64(v),
-                Err(_) => self.serialize_big_integer(&v.to_be_bytes()),
+            match i128::try_from(v) {
+                Ok(v) => self.serialize_i128(v),
+                Err(_) => {
+                    // we need an extra byte for the sign bit
+                    let mut buf = [0; 17];
+                    buf[1..].copy_from_slice(&v.to_be_bytes());
+                    self.serialize_big_integer(&buf)
+                }
             }
         }
     }

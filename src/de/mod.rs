@@ -263,6 +263,11 @@ where
             out[8 - buf.len()..].copy_from_slice(&buf);
             let v = u64::from_be_bytes(out);
             visitor.visit_u64(v)
+        } else if buf.len() <= 16 {
+            let mut out = [0; 16];
+            out[16 - buf.len()..].copy_from_slice(&buf);
+            let v = i128::from_be_bytes(out);
+            visitor.visit_i128(v)
         } else {
             // FIXME support via BigInteger "magic" type
             Err(Error::unsupported_big_integer())
