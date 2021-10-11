@@ -1,8 +1,12 @@
 [package]
 name = "serde-smile"
 version = "0.1.0"
-edition = "2018"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/sfackler/serde-smile"
+keywords = ["smile", "serde", "serialization"]
+categories = ["encoding"]
 exclude = ["jackson"]
+edition = "2018"
 
 [dependencies]
 byteorder = "1"
