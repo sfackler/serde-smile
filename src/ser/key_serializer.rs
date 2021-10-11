@@ -202,23 +202,23 @@ where
     }
 
     fn serialize_unit_variant(
-        self,
+        mut self,
         _name: &'static str,
         _variant_index: u32,
-        _variant: &'static str,
+        variant: &'static str,
     ) -> Result<Self::Ok, Self::Error> {
-        Err(Error::key_must_be_a_string())
+        self.serialize_maybe_static_str(MaybeStatic::Static(variant))
     }
 
     fn serialize_newtype_struct<T>(
         self,
         _name: &'static str,
-        _value: &T,
+        value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
         T: Serialize + ?Sized,
     {
-        Err(Error::key_must_be_a_string())
+        value.serialize(self)
     }
 
     fn serialize_newtype_variant<T>(
