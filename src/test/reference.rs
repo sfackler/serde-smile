@@ -115,7 +115,7 @@ impl<'de> Deserialize<'de> for Base64Binary {
             let s = String::deserialize(deserializer)?;
             base64::decode(&s)
                 .map(Base64Binary)
-                .map_err(|e| de::Error::custom(e))
+                .map_err(de::Error::custom)
         } else {
             ByteBuf::deserialize(deserializer).map(|v| Base64Binary(v.into_vec()))
         }

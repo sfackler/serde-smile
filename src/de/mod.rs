@@ -242,7 +242,7 @@ where
             buf[in_base + remainder as usize] <<= 7 - remainder as usize;
 
             for i in 0..(remainder as usize) {
-                buf[out_base + i] = buf[in_base + i] << i + 1 | buf[in_base + i + 1] >> 6 - i;
+                buf[out_base + i] = buf[in_base + i] << (i + 1) | buf[in_base + i + 1] >> (6 - i);
             }
         }
 

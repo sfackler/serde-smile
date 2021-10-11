@@ -195,7 +195,7 @@ where
         self.serialize_vint(v.len() as u64)?;
 
         let mut it = v.chunks_exact(7);
-        while let Some(chunk) = it.next() {
+        for chunk in &mut it {
             let buf = [
                 chunk[0] >> 1,
                 ((chunk[0] << 6) | (chunk[1] >> 2)) & 0x7f,
@@ -375,6 +375,7 @@ where
             return Ok(());
         }
 
+        #[allow(clippy::collapsible_else_if)]
         if v.is_ascii() {
             if v.len() <= 32 {
                 self.writer
