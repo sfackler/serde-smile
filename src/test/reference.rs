@@ -62,11 +62,10 @@ where
         .build(vec![])
         .unwrap();
     test_case.value.serialize(&mut serializer).unwrap();
-    let actual = if test_case.write_end_marker {
+    if test_case.write_end_marker {
         serializer.end().unwrap()
-    } else {
-        serializer.into_inner()
-    };
+    }
+    let actual = serializer.into_inner();
 
     assert_eq!(expected, actual);
 

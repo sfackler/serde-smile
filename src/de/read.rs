@@ -8,6 +8,10 @@ pub(crate) mod private {
     pub trait Sealed {}
 }
 
+/// A trait used by [`Deserializer`](crate::Deserializer) to abstract over input types.
+///
+/// This trait is sealed and cannot be implemented outside of `serde_smile`. The contents of the trait are not
+/// considered part of the crate's public API and are subject to change at any time.
 pub trait Read<'de>: private::Sealed {
     #[doc(hidden)]
     fn next(&mut self) -> Result<Option<u8>, Error>;
@@ -72,6 +76,7 @@ impl DerefMut for MutBuf<'_, '_> {
     }
 }
 
+/// A [`Read`] implementation for shared slices.
 pub struct SliceRead<'a> {
     slice: &'a [u8],
     index: usize,
@@ -79,6 +84,7 @@ pub struct SliceRead<'a> {
 }
 
 impl<'a> SliceRead<'a> {
+    /// Creates a new `SliceRead`.
     pub fn new(slice: &'a [u8]) -> Self {
         SliceRead {
             slice,
@@ -151,11 +157,13 @@ impl<'de> Read<'de> for SliceRead<'de> {
     }
 }
 
+/// A [`Read`] implementation for mutable slices.
 pub struct MutSliceRead<'a> {
     slice: &'a mut [u8],
 }
 
 impl<'a> MutSliceRead<'a> {
+    /// Creates a new `MutSliceRead`.
     pub fn new(slice: &'a mut [u8]) -> Self {
         MutSliceRead { slice }
     }
@@ -221,6 +229,7 @@ impl<'de> Read<'de> for MutSliceRead<'de> {
     }
 }
 
+/// A [`Read`] implementation for buffered IO streams.
 pub struct IoRead<R> {
     reader: R,
     buf: Vec<u8>,
@@ -230,6 +239,7 @@ impl<R> IoRead<R>
 where
     R: BufRead,
 {
+    /// Creates a new `IoRead`.
     pub fn new(reader: R) -> Self {
         IoRead {
             reader,

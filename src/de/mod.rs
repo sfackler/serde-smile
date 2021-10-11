@@ -1,3 +1,4 @@
+//! Deserialize Smile data into a Rust data structure.
 use crate::de::key_deserializer::KeyDeserializer;
 use crate::de::read::{Buf, MutBuf};
 pub use crate::de::read::{IoRead, MutSliceRead, Read, SliceRead};
@@ -14,6 +15,7 @@ mod key_deserializer;
 mod read;
 mod string_cache;
 
+/// Deserializes an instance of type `T` from a slice of Smile data.
 pub fn from_slice<'de, T>(slice: &'de [u8]) -> Result<T, Error>
 where
     T: Deserialize<'de>,
@@ -24,6 +26,7 @@ where
     Ok(value)
 }
 
+/// Deserializes an instance of type `T` from a mutable slice of Smile data.
 pub fn from_mut_slice<'de, T>(slice: &'de mut [u8]) -> Result<T, Error>
 where
     T: Deserialize<'de>,
@@ -34,6 +37,7 @@ where
     Ok(value)
 }
 
+/// Deserializes an instance of type `T` from an IO stream of Smile data.
 pub fn from_reader<T, R>(reader: R) -> Result<T, Error>
 where
     T: DeserializeOwned,
@@ -45,6 +49,7 @@ where
     Ok(value)
 }
 
+/// A structure that deserializes Smile into Rust values.
 pub struct Deserializer<'de, R> {
     reader: R,
     remaining_depth: u8,
@@ -53,12 +58,19 @@ pub struct Deserializer<'de, R> {
 }
 
 impl<'de> Deserializer<'de, SliceRead<'de>> {
+    /// Creates a `Deserializer` from a shared slice.
+    ///
+    /// Strings and raw binary values can be borrowed from the input slice, but 7-bit encoded binary data cannot.
     pub fn from_slice(slice: &'de [u8]) -> Result<Self, Error> {
         Deserializer::new(SliceRead::new(slice))
     }
 }
 
 impl<'de> Deserializer<'de, MutSliceRead<'de>> {
+    /// Creates a `Deserializer` from a mutable slice.
+    ///
+    /// All strings and binary values can be borrowed from the input slice. However, the contents of the slice are
+    /// indeterminate after deserialization.
     pub fn from_mut_slice(slice: &'de mut [u8]) -> Result<Self, Error> {
         Deserializer::new(MutSliceRead::new(slice))
     }
@@ -68,6 +80,9 @@ impl<'de, R> Deserializer<'de, IoRead<R>>
 where
     R: BufRead,
 {
+    /// Creates a `Deserializer` from a buffered IO stream.
+    ///
+    /// No strings or binary data can be borrowed from the input.
     pub fn from_reader(reader: R) -> Result<Self, Error> {
         Deserializer::new(IoRead::new(reader))
     }
@@ -77,6 +92,10 @@ impl<'de, R> Deserializer<'de, R>
 where
     R: Read<'de>,
 {
+    /// Creates a new `Deserializer` from one of the possible `serde_smile` input sources.
+    ///
+    /// The [`Self::from_slice`], [`Self::from_mut_slice`], and [`Self::from_reader`] constructors should generally be
+    /// preferred to this.
     pub fn new(mut reader: R) -> Result<Self, Error> {
         let header = reader
             .read(4)?
@@ -106,6 +125,9 @@ where
         })
     }
 
+    /// Validates that all Smile data has been consumed from the input.
+    ///
+    /// Both the Smile end-of-stream token and an actual EOF from the input are considered valid ends.
     pub fn end(&mut self) -> Result<(), Error> {
         match self.reader.next()? {
             Some(0xff) => Ok(()),

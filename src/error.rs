@@ -24,6 +24,7 @@ enum ErrorKind {
     EofWhileParsingHeader,
 }
 
+/// An error encountered when serializing or deserializing to or from Smile.
 #[derive(Debug)]
 pub struct Error(Box<ErrorKind>);
 

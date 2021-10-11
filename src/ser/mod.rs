@@ -1,3 +1,4 @@
+//! Serialize a Rust data structure into Smile data.
 use crate::ser::key_serializer::{KeySerializer, MaybeStatic};
 use crate::ser::string_cache::StringCache;
 use crate::Error;
@@ -14,6 +15,7 @@ use std::io::Write;
 mod key_serializer;
 mod string_cache;
 
+/// Serializes the given data structure to a Smile byte vector using default serializer settings.
 pub fn to_vec<T>(value: &T) -> Result<Vec<u8>, Error>
 where
     T: Serialize + ?Sized,
@@ -23,6 +25,7 @@ where
     Ok(buf)
 }
 
+/// Serializes the given data structure as Smile into the IO stream using default serializer settings.
 pub fn to_writer<W, T>(writer: W, value: &T) -> Result<(), Error>
 where
     W: Write,
@@ -32,6 +35,7 @@ where
     value.serialize(&mut serializer)
 }
 
+/// A builder to configure a [`Serializer`].
 pub struct Builder {
     raw_binary: bool,
     shared_strings: bool,
@@ -39,21 +43,34 @@ pub struct Builder {
 }
 
 impl Builder {
+    /// Enables the transmission of binary data in "raw" form.
+    ///
+    /// This format is more performant and space efficient, but Smile framing tokens may be present in the encoded
+    /// binary data.
+    ///
+    /// Defaults to `false`.
     pub fn raw_binary(&mut self, raw_binary: bool) -> &mut Self {
         self.raw_binary = raw_binary;
         self
     }
 
+    /// Enables deduplication of repeated value strings.
+    ///
+    /// Defaults to `false`.
     pub fn shared_strings(&mut self, shared_strings: bool) -> &mut Self {
         self.shared_strings = shared_strings;
         self
     }
 
+    /// Enables deduplication of repeated map key strings.
+    ///
+    /// Defaults to `true`.
     pub fn shared_properties(&mut self, shared_properties: bool) -> &mut Self {
         self.shared_properties = shared_properties;
         self
     }
 
+    /// Creates a new [`Serializer`], writing the Smile header to the writer.
     pub fn build<W>(&self, mut writer: W) -> Result<Serializer<W>, Error>
     where
         W: Write,
@@ -88,6 +105,7 @@ impl Builder {
     }
 }
 
+/// A structure for serializing Rust values into Smile.
 pub struct Serializer<W> {
     writer: W,
     raw_binary: bool,
@@ -96,6 +114,7 @@ pub struct Serializer<W> {
 }
 
 impl Serializer<()> {
+    /// Returns a builder used to configure a `Serializer`.
     pub fn builder() -> Builder {
         Builder {
             raw_binary: false,
@@ -109,18 +128,23 @@ impl<W> Serializer<W>
 where
     W: Write,
 {
+    /// Creates a new `Serializer` with default settings, writing the Smile header to the writer.
     pub fn new(writer: W) -> Result<Self, Error> {
         Serializer::builder().build(writer)
     }
 
-    pub fn into_inner(self) -> W {
-        self.writer
+    /// Writes the Smile end of stream token to the writer.
+    ///
+    /// The end of stream indicator is not required in a Smile encoding, but can help with framing in some contexts.
+    ///
+    /// This should only be called after serializing all data.
+    pub fn end(&mut self) -> Result<(), Error> {
+        self.writer.write_u8(0xff).map_err(Error::io)
     }
 
-    pub fn end(mut self) -> Result<W, Error> {
-        self.writer.write_u8(0xff).map_err(Error::io)?;
-
-        Ok(self.writer)
+    /// Consumes the `Serializer`, returning the inner writer.
+    pub fn into_inner(self) -> W {
+        self.writer
     }
 
     fn serialize_vint(&mut self, mut v: u64) -> Result<(), Error> {
