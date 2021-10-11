@@ -123,99 +123,21 @@ where
         Ok(self.writer)
     }
 
-    fn serialize_vint(&mut self, v: u64) -> Result<(), Error> {
+    fn serialize_vint(&mut self, mut v: u64) -> Result<(), Error> {
         let mut buf = [0; 10];
 
-        let bytes = match v {
-            0..=0x3f => {
-                buf[0] = v as u8;
-                1
-            }
-            0x40..=0x1f_ff => {
-                buf[0] = (v >> 6) as u8;
-                buf[1] = (v & 0x3f) as u8;
-                2
-            }
-            0x20_00..=0x0f_ff_ff => {
-                buf[0] = (v >> 13) as u8;
-                buf[1] = (v >> 6) as u8 & 0x7f;
-                buf[2] = v as u8 & 0x3f;
-                3
-            }
-            0x10_00_00..=0x07_ff_ff_ff => {
-                buf[0] = (v >> 20) as u8;
-                buf[1] = (v >> 13) as u8 & 0x7f;
-                buf[2] = (v >> 6) as u8 & 0x7f;
-                buf[3] = v as u8 & 0x3f;
-                4
-            }
-            0x08_00_00_00..=0x03_ff_ff_ff_ff => {
-                buf[0] = (v >> 27) as u8;
-                buf[1] = (v >> 20) as u8 & 0x7f;
-                buf[2] = (v >> 13) as u8 & 0x7f;
-                buf[3] = (v >> 6) as u8 & 0x7f;
-                buf[4] = v as u8 & 0x3f;
-                5
-            }
-            0x04_00_00_00_00..=0x01_ff_ff_ff_ff_ff => {
-                buf[0] = (v >> 34) as u8;
-                buf[1] = (v >> 27) as u8 & 0x7f;
-                buf[2] = (v >> 20) as u8 & 0x7f;
-                buf[3] = (v >> 13) as u8 & 0x7f;
-                buf[4] = (v >> 6) as u8 & 0x7f;
-                buf[5] = v as u8 & 0x3f;
-                6
-            }
-            0x02_00_00_00_00_00..=0xff_ff_ff_ff_ff_ff => {
-                buf[0] = (v >> 41) as u8;
-                buf[1] = (v >> 34) as u8 & 0x7f;
-                buf[2] = (v >> 27) as u8 & 0x7f;
-                buf[3] = (v >> 20) as u8 & 0x7f;
-                buf[4] = (v >> 13) as u8 & 0x7f;
-                buf[5] = (v >> 6) as u8 & 0x7f;
-                buf[6] = v as u8 & 0x3f;
-                7
-            }
-            0x01_00_00_00_00_00_00..=0x7f_ff_ff_ff_ff_ff_ff => {
-                buf[0] = (v >> 48) as u8;
-                buf[1] = (v >> 41) as u8 & 0x7f;
-                buf[2] = (v >> 34) as u8 & 0x7f;
-                buf[3] = (v >> 27) as u8 & 0x7f;
-                buf[4] = (v >> 20) as u8 & 0x7f;
-                buf[5] = (v >> 13) as u8 & 0x7f;
-                buf[6] = (v >> 6) as u8 & 0x7f;
-                buf[7] = v as u8 & 0x3f;
-                8
-            }
-            0x80_00_00_00_00_00_00..=0x3f_ff_ff_ff_ff_ff_ff_ff => {
-                buf[0] = (v >> 55) as u8;
-                buf[1] = (v >> 48) as u8 & 0x7f;
-                buf[2] = (v >> 41) as u8 & 0x7f;
-                buf[3] = (v >> 34) as u8 & 0x7f;
-                buf[4] = (v >> 27) as u8 & 0x7f;
-                buf[5] = (v >> 20) as u8 & 0x7f;
-                buf[6] = (v >> 13) as u8 & 0x7f;
-                buf[7] = (v >> 6) as u8 & 0x7f;
-                buf[8] = v as u8 & 0x3f;
-                9
-            }
-            0x40_00_00_00_00_00_00_00..=0xff_ff_ff_ff_ff_ff_ff_ff => {
-                buf[0] = (v >> 62) as u8;
-                buf[1] = (v >> 55) as u8 & 0x7f;
-                buf[2] = (v >> 48) as u8 & 0x7f;
-                buf[3] = (v >> 41) as u8 & 0x7f;
-                buf[4] = (v >> 34) as u8 & 0x7f;
-                buf[5] = (v >> 27) as u8 & 0x7f;
-                buf[6] = (v >> 20) as u8 & 0x7f;
-                buf[7] = (v >> 13) as u8 & 0x7f;
-                buf[8] = (v >> 6) as u8 & 0x7f;
-                buf[9] = v as u8 & 0x3f;
-                10
-            }
-        };
+        let mut i = 9;
+        // the last byte only stores 6 bits
+        buf[i] = v as u8 & 0x3f | 0x80;
+        v >>= 6;
 
-        buf[bytes - 1] |= 0x80;
-        self.writer.write_all(&buf[..bytes]).map_err(Error::io)
+        while v != 0 {
+            i -= 1;
+            buf[i] = v as u8 & 0x7f;
+            v >>= 7;
+        }
+
+        self.writer.write_all(&buf[i..]).map_err(Error::io)
     }
 
     fn serialize_shared_str(&mut self, v: &str) -> Result<bool, Error> {
