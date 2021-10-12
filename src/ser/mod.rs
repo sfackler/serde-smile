@@ -1,17 +1,17 @@
 //! Serialize a Rust data structure into Smile data.
+use crate::ser::compound::{Compound, Mode};
 use crate::ser::key_serializer::{KeySerializer, MaybeStatic};
 use crate::ser::string_cache::StringCache;
+use crate::value::BigInteger;
 use crate::Error;
-use byteorder::WriteBytesExt;
-use serde::ser::{
-    SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
-    SerializeTupleStruct, SerializeTupleVariant,
-};
+use serde::ser::SerializeStruct;
 use serde::{serde_if_integer128, Serialize};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::io::Write;
 
+mod big_integer_serializer;
+mod compound;
 mod key_serializer;
 mod string_cache;
 
@@ -139,7 +139,7 @@ where
     ///
     /// This should only be called after serializing all data.
     pub fn end(&mut self) -> Result<(), Error> {
-        self.writer.write_u8(0xff).map_err(Error::io)
+        self.writer.write_all(&[0xff]).map_err(Error::io)
     }
 
     /// Consumes the `Serializer`, returning the inner writer.
@@ -177,7 +177,9 @@ where
         match shared_strings.get(v) {
             Some(backref) => {
                 if backref <= 30 {
-                    self.writer.write_u8(backref as u8 + 1).map_err(Error::io)?;
+                    self.writer
+                        .write_all(&[backref as u8 + 1])
+                        .map_err(Error::io)?;
                 } else {
                     let buf = [0xec | (backref >> 8) as u8, backref as u8];
                     self.writer.write_all(&buf).map_err(Error::io)?;
@@ -226,7 +228,7 @@ where
     }
 
     fn serialize_big_integer(&mut self, v: &[u8]) -> Result<(), Error> {
-        self.writer.write_u8(0x26).map_err(Error::io)?;
+        self.writer.write_all(&[0x26]).map_err(Error::io)?;
         self.serialize_7_bit_binary(v)
     }
 
@@ -243,23 +245,23 @@ where
 
     type Error = Error;
 
-    type SerializeSeq = Self;
+    type SerializeSeq = Compound<'a, W>;
 
-    type SerializeTuple = Self;
+    type SerializeTuple = Compound<'a, W>;
 
-    type SerializeTupleStruct = Self;
+    type SerializeTupleStruct = Compound<'a, W>;
 
-    type SerializeTupleVariant = Self;
+    type SerializeTupleVariant = Compound<'a, W>;
 
-    type SerializeMap = Self;
+    type SerializeMap = Compound<'a, W>;
 
-    type SerializeStruct = Self;
+    type SerializeStruct = Compound<'a, W>;
 
-    type SerializeStructVariant = Self;
+    type SerializeStructVariant = Compound<'a, W>;
 
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error> {
         let b = if v { 0x23 } else { 0x22 };
-        self.writer.write_u8(b).map_err(Error::io)
+        self.writer.write_all(&[b]).map_err(Error::io)
     }
 
     fn serialize_i8(self, v: i8) -> Result<Self::Ok, Self::Error> {
@@ -274,9 +276,11 @@ where
         let zigzag = ((v << 1) ^ (v >> 31)) as u32 as u64;
 
         if zigzag < 32 {
-            self.writer.write_u8(0xc0 + zigzag as u8).map_err(Error::io)
+            self.writer
+                .write_all(&[0xc0 + zigzag as u8])
+                .map_err(Error::io)
         } else {
-            self.writer.write_u8(0x24).map_err(Error::io)?;
+            self.writer.write_all(&[0x24]).map_err(Error::io)?;
             self.serialize_vint(zigzag)
         }
     }
@@ -285,7 +289,7 @@ where
         match i32::try_from(v) {
             Ok(v) => self.serialize_i32(v),
             Err(_) => {
-                self.writer.write_u8(0x25).map_err(Error::io)?;
+                self.writer.write_all(&[0x25]).map_err(Error::io)?;
                 let zigzag = ((v << 1) ^ (v >> 63)) as u64;
                 self.serialize_vint(zigzag)
             }
@@ -378,7 +382,7 @@ where
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
         if v.is_empty() {
-            return self.writer.write_u8(0x20).map_err(Error::io);
+            return self.writer.write_all(&[0x20]).map_err(Error::io);
         }
 
         if self.serialize_shared_str(v)? {
@@ -389,34 +393,34 @@ where
         if v.is_ascii() {
             if v.len() <= 32 {
                 self.writer
-                    .write_u8(0x40 + v.len() as u8 - 1)
+                    .write_all(&[0x40 + v.len() as u8 - 1])
                     .map_err(Error::io)?;
                 self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
             } else if v.len() <= 64 {
                 self.writer
-                    .write_u8(0x60 + v.len() as u8 - 33)
+                    .write_all(&[0x60 + v.len() as u8 - 33])
                     .map_err(Error::io)?;
                 self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
             } else {
-                self.writer.write_u8(0xe0).map_err(Error::io)?;
+                self.writer.write_all(&[0xe0]).map_err(Error::io)?;
                 self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
-                self.writer.write_u8(0xfc).map_err(Error::io)?;
+                self.writer.write_all(&[0xfc]).map_err(Error::io)?;
             }
         } else {
             if v.len() <= 33 {
                 self.writer
-                    .write_u8(0x80 + v.len() as u8 - 2)
+                    .write_all(&[0x80 + v.len() as u8 - 2])
                     .map_err(Error::io)?;
                 self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
             } else if v.len() <= 64 {
                 self.writer
-                    .write_u8(0xa0 + v.len() as u8 - 34)
+                    .write_all(&[0xa0 + v.len() as u8 - 34])
                     .map_err(Error::io)?;
                 self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
             } else {
-                self.writer.write_u8(0xe4).map_err(Error::io)?;
+                self.writer.write_all(&[0xe4]).map_err(Error::io)?;
                 self.writer.write_all(v.as_bytes()).map_err(Error::io)?;
-                self.writer.write_u8(0xfc).map_err(Error::io)?;
+                self.writer.write_all(&[0xfc]).map_err(Error::io)?;
             }
         }
 
@@ -425,11 +429,11 @@ where
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
         if self.raw_binary {
-            self.writer.write_u8(0xfd).map_err(Error::io)?;
+            self.writer.write_all(&[0xfd]).map_err(Error::io)?;
             self.serialize_vint(v.len() as u64)?;
             self.writer.write_all(v).map_err(Error::io)
         } else {
-            self.writer.write_u8(0xe8).map_err(Error::io)?;
+            self.writer.write_all(&[0xe8]).map_err(Error::io)?;
             self.serialize_7_bit_binary(v)
         }
     }
@@ -446,7 +450,7 @@ where
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
-        self.writer.write_u8(0x21).map_err(Error::io)
+        self.writer.write_all(&[0x21]).map_err(Error::io)
     }
 
     fn serialize_unit_struct(self, _: &'static str) -> Result<Self::Ok, Self::Error> {
@@ -464,7 +468,7 @@ where
 
     fn serialize_newtype_struct<T>(
         self,
-        _: &'static str,
+        _name: &'static str,
         value: &T,
     ) -> Result<Self::Ok, Self::Error>
     where
@@ -489,8 +493,11 @@ where
     }
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
-        self.writer.write_u8(0xf8).map_err(Error::io)?;
-        Ok(self)
+        self.writer.write_all(&[0xf8]).map_err(Error::io)?;
+        Ok(Compound {
+            ser: self,
+            mode: Mode::Normal,
+        })
     }
 
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple, Self::Error> {
@@ -510,24 +517,38 @@ where
         _name: &'static str,
         _variant_index: u32,
         variant: &'static str,
-        len: usize,
+        _len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        let ser = self.serialize_map(Some(1))?;
-        ser.serialize_static_key(variant)?;
-        ser.serialize_seq(Some(len))
+        self.writer.write_all(&[0xfa]).map_err(Error::io)?;
+        self.serialize_static_key(variant)?;
+        self.writer.write_all(&[0xf8]).map_err(Error::io)?;
+        Ok(Compound {
+            ser: self,
+            mode: Mode::Normal,
+        })
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
-        self.writer.write_u8(0xfa).map_err(Error::io)?;
-        Ok(self)
+        self.writer.write_all(&[0xfa]).map_err(Error::io)?;
+        Ok(Compound {
+            ser: self,
+            mode: Mode::Normal,
+        })
     }
 
     fn serialize_struct(
         self,
-        _name: &'static str,
+        name: &'static str,
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
-        self.serialize_map(Some(len))
+        if name == BigInteger::STRUCT_NAME {
+            Ok(Compound {
+                ser: self,
+                mode: Mode::BigInteger,
+            })
+        } else {
+            self.serialize_map(Some(len))
+        }
     }
 
     fn serialize_struct_variant(
@@ -535,162 +556,18 @@ where
         _name: &'static str,
         _variant_index: u32,
         variant: &'static str,
-        len: usize,
+        _len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
-        let ser = self.serialize_map(Some(1))?;
-        ser.serialize_static_key(variant)?;
-        ser.serialize_map(Some(len))
+        self.writer.write_all(&[0xfa]).map_err(Error::io)?;
+        self.serialize_static_key(variant)?;
+        self.writer.write_all(&[0xfa]).map_err(Error::io)?;
+        Ok(Compound {
+            ser: self,
+            mode: Mode::Normal,
+        })
     }
 
     fn is_human_readable(&self) -> bool {
         false
-    }
-}
-
-impl<'a, W> SerializeSeq for &'a mut Serializer<W>
-where
-    W: Write,
-{
-    type Ok = ();
-
-    type Error = Error;
-
-    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        value.serialize(&mut **self)
-    }
-
-    fn end(self) -> Result<Self::Ok, Self::Error> {
-        self.writer.write_u8(0xf9).map_err(Error::io)
-    }
-}
-
-impl<'a, W> SerializeTuple for &'a mut Serializer<W>
-where
-    W: Write,
-{
-    type Ok = ();
-
-    type Error = Error;
-
-    fn serialize_element<T>(&mut self, value: &T) -> Result<(), Self::Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        SerializeSeq::serialize_element(self, value)
-    }
-
-    fn end(self) -> Result<Self::Ok, Self::Error> {
-        SerializeSeq::end(self)
-    }
-}
-
-impl<'a, W> SerializeTupleStruct for &'a mut Serializer<W>
-where
-    W: Write,
-{
-    type Ok = ();
-
-    type Error = Error;
-
-    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Self::Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        SerializeSeq::serialize_element(self, value)
-    }
-
-    fn end(self) -> Result<Self::Ok, Self::Error> {
-        SerializeSeq::end(self)
-    }
-}
-
-impl<'a, W> SerializeTupleVariant for &'a mut Serializer<W>
-where
-    W: Write,
-{
-    type Ok = ();
-
-    type Error = Error;
-
-    fn serialize_field<T>(&mut self, value: &T) -> Result<(), Self::Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        SerializeSeq::serialize_element(self, value)
-    }
-
-    fn end(self) -> Result<Self::Ok, Self::Error> {
-        self.writer.write_all(&[0xf9, 0xfb]).map_err(Error::io)
-    }
-}
-
-impl<'a, W> SerializeMap for &'a mut Serializer<W>
-where
-    W: Write,
-{
-    type Ok = ();
-
-    type Error = Error;
-
-    fn serialize_key<T>(&mut self, key: &T) -> Result<(), Self::Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        key.serialize(KeySerializer { ser: self })
-    }
-
-    fn serialize_value<T>(&mut self, value: &T) -> Result<(), Self::Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        value.serialize(&mut **self)
-    }
-
-    fn end(self) -> Result<Self::Ok, Self::Error> {
-        self.writer.write_u8(0xfb).map_err(Error::io)
-    }
-}
-
-impl<'a, W> SerializeStruct for &'a mut Serializer<W>
-where
-    W: Write,
-{
-    type Ok = ();
-
-    type Error = Error;
-
-    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        self.serialize_static_key(key)?;
-        SerializeMap::serialize_value(self, value)
-    }
-
-    fn end(self) -> Result<Self::Ok, Self::Error> {
-        SerializeMap::end(self)
-    }
-}
-
-impl<'a, W> SerializeStructVariant for &'a mut Serializer<W>
-where
-    W: Write,
-{
-    type Ok = ();
-
-    type Error = Error;
-
-    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
-    where
-        T: Serialize + ?Sized,
-    {
-        SerializeStruct::serialize_field(self, key, value)
-    }
-
-    fn end(self) -> Result<Self::Ok, Self::Error> {
-        self.writer.write_all(&[0xfb, 0xfb]).map_err(Error::io)
     }
 }

@@ -1,16 +1,19 @@
 //! Deserialize Smile data into a Rust data structure.
+use crate::de::big_integer_deserializer::BigIntegerDeserializer;
 use crate::de::key_deserializer::KeyDeserializer;
 use crate::de::read::{Buf, MutBuf};
 pub use crate::de::read::{IoRead, MutSliceRead, Read, SliceRead};
 use crate::de::string_cache::StringCache;
+use crate::value::BigInteger;
 use crate::Error;
 use serde::de::{self, DeserializeOwned, Visitor};
-use serde::{Deserialize, Deserializer as _};
+use serde::{serde_if_integer128, Deserialize, Deserializer as _};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::io::BufRead;
 use std::str;
 
+mod big_integer_deserializer;
 mod key_deserializer;
 mod read;
 mod string_cache;
@@ -253,25 +256,56 @@ where
         Ok(out)
     }
 
+    fn sign_extend(&self, extra: &mut [u8], number: &[u8]) {
+        let extension = (number[0] as i8 >> 7) as u8;
+        extra.fill(extension);
+    }
+
     fn parse_big_integer<V>(&mut self, visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
     {
         let buf = self.parse_7_bit_binary()?;
+
+        if buf.is_empty() {
+            return visitor.visit_u8(0);
+        }
+
         if buf.len() <= 8 {
             let mut out = [0; 8];
-            out[8 - buf.len()..].copy_from_slice(&buf);
-            let v = u64::from_be_bytes(out);
-            visitor.visit_u64(v)
-        } else if buf.len() <= 16 {
-            let mut out = [0; 16];
-            out[16 - buf.len()..].copy_from_slice(&buf);
-            let v = i128::from_be_bytes(out);
-            visitor.visit_i128(v)
-        } else {
-            // FIXME support via BigInteger "magic" type
-            Err(Error::unsupported_big_integer())
+            let (extra, number) = out.split_at_mut(8 - buf.len());
+            number.copy_from_slice(&buf);
+            self.sign_extend(extra, number);
+            let v = i64::from_be_bytes(out);
+            return visitor.visit_i64(v);
         }
+
+        if buf.len() == 9 && buf[0] == 0 {
+            let mut out = [0; 8];
+            out.copy_from_slice(&buf[1..]);
+            let v = u64::from_be_bytes(out);
+            return visitor.visit_u64(v);
+        }
+
+        serde_if_integer128! {
+            if buf.len() <= 16 {
+                let mut out = [0; 16];
+                let (extra, number) = out.split_at_mut(16 - buf.len());
+                number.copy_from_slice(&buf);
+                self.sign_extend(extra, number);
+                let v = i128::from_be_bytes(out);
+                return visitor.visit_i128(v);
+            }
+
+            if buf.len() == 17 && buf[0] == 0 {
+                let mut out = [0; 16];
+                out.copy_from_slice(&buf[1..]);
+                let v = u128::from_be_bytes(out);
+                return visitor.visit_u128(v);
+            }
+        }
+
+        visitor.visit_map(BigIntegerDeserializer { de: self })
     }
 
     fn parse_f32<V>(&mut self, visitor: V) -> Result<V::Value, Error>
@@ -550,9 +584,28 @@ where
         }
     }
 
+    fn deserialize_struct<V>(
+        self,
+        name: &'static str,
+        fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: Visitor<'de>,
+    {
+        if name == BigInteger::STRUCT_NAME && fields == [BigInteger::FIELD_NAME] {
+            if let Some(0x26) = self.reader.peek()? {
+                self.reader.consume();
+                return visitor.visit_map(BigIntegerDeserializer { de: self });
+            }
+        }
+
+        self.deserialize_any(visitor)
+    }
+
     serde::forward_to_deserialize_any! {
         bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string unit
-        unit_struct seq tuple tuple_struct map struct identifier ignored_any
+        unit_struct seq tuple tuple_struct map identifier ignored_any
         bytes byte_buf
     }
 

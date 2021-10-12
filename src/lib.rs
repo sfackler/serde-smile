@@ -18,3 +18,4 @@ mod error;
 pub mod ser;
 #[cfg(test)]
 mod test;
+pub mod value;

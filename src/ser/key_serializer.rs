@@ -1,6 +1,5 @@
 use crate::ser::Serializer;
 use crate::Error;
-use byteorder::WriteBytesExt;
 use serde::ser::Impossible;
 use serde::{serde_if_integer128, Serialize, Serializer as _};
 use std::borrow::Cow;
@@ -39,7 +38,7 @@ where
                 if backref <= 63 {
                     self.ser
                         .writer
-                        .write_u8(0x40 + backref as u8)
+                        .write_all(&[0x40 + backref as u8])
                         .map_err(Error::io)?;
                 } else {
                     let buf = [0x30 | (backref >> 8) as u8, backref as u8];
@@ -63,7 +62,7 @@ where
         v: MaybeStatic<'_, str>,
     ) -> Result<(), Error> {
         if v.is_empty() {
-            return self.ser.writer.write_u8(0x20).map_err(Error::io);
+            return self.ser.writer.write_all(&[0x20]).map_err(Error::io);
         }
 
         if self.serialize_shared_property(v)? {
@@ -73,19 +72,19 @@ where
         if v.len() <= 64 && v.is_ascii() {
             self.ser
                 .writer
-                .write_u8(0x80 + v.len() as u8 - 1)
+                .write_all(&[0x80 + v.len() as u8 - 1])
                 .map_err(Error::io)?;
             self.ser.writer.write_all(v.as_bytes()).map_err(Error::io)?;
         } else if v.len() < 57 {
             self.ser
                 .writer
-                .write_u8(0xc0 + v.len() as u8 - 2)
+                .write_all(&[0xc0 + v.len() as u8 - 2])
                 .map_err(Error::io)?;
             self.ser.writer.write_all(v.as_bytes()).map_err(Error::io)?;
         } else {
-            self.ser.writer.write_u8(0x34).map_err(Error::io)?;
+            self.ser.writer.write_all(&[0x34]).map_err(Error::io)?;
             self.ser.writer.write_all(v.as_bytes()).map_err(Error::io)?;
-            self.ser.writer.write_u8(0xfc).map_err(Error::io)?;
+            self.ser.writer.write_all(&[0xfc]).map_err(Error::io)?;
         }
 
         Ok(())
