@@ -2,6 +2,7 @@ use crate::de::read::Buf;
 use crate::de::Read;
 use crate::value::BigInteger;
 use crate::{Deserializer, Error};
+use serde::de::value::BorrowedStrDeserializer;
 use serde::de::{DeserializeSeed, MapAccess, Visitor};
 use serde::forward_to_deserialize_any;
 
@@ -24,7 +25,8 @@ where
             return Ok(None);
         }
 
-        seed.deserialize(BigIntegerFieldDeserializer).map(Some)
+        seed.deserialize(BorrowedStrDeserializer::new(BigInteger::FIELD_NAME))
+            .map(Some)
     }
 
     fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
@@ -33,25 +35,6 @@ where
     {
         self.done = true;
         seed.deserialize(BigIntegerValueDeserializer { de: &mut *self.de })
-    }
-}
-
-struct BigIntegerFieldDeserializer;
-
-impl<'de> serde::Deserializer<'de> for BigIntegerFieldDeserializer {
-    type Error = Error;
-
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_borrowed_str(BigInteger::FIELD_NAME)
-    }
-
-    forward_to_deserialize_any! {
-        bool u8 u16 u32 u64 i8 i16 i32 i64 f32 f64 char str string seq
-        bytes byte_buf map struct option unit newtype_struct
-        ignored_any unit_struct tuple_struct tuple enum identifier
     }
 }
 
