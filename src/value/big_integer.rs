@@ -76,7 +76,7 @@ impl<'de> Deserialize<'de> for BigInteger {
             }
         }
 
-        deserializer.deserialize_newtype_struct(Self::STRUCT_NAME, BigIntegerVisitor)
+        deserializer.deserialize_struct(Self::STRUCT_NAME, &[Self::FIELD_NAME], BigIntegerVisitor)
     }
 }
 

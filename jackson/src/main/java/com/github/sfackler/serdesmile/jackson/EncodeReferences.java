@@ -1,6 +1,7 @@
 package com.github.sfackler.serdesmile.jackson;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,6 +44,8 @@ public final class EncodeReferences {
         processTestCases("shared_property", new TypeReference<TestCase<List<Map<String, Integer>>>>() {
         });
         processTestCases("shared_string", new TypeReference<TestCase<List<Map<String, String>>>>() {
+        });
+        processTestCases("big_integer", new TypeReference<TestCase<BigInteger>>() {
         });
     }
 

@@ -1,4 +1,5 @@
 use crate::ser::Serializer;
+use crate::value::BigInteger;
 use linked_hash_map::LinkedHashMap;
 use serde::de::{self, DeserializeOwned};
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,7 @@ category!(list, Vec<String>);
 category!(map, LinkedHashMap<String, i32>);
 category!(shared_property, Vec<LinkedHashMap<String, i32>>);
 category!(shared_string, Vec<LinkedHashMap<String, String>>);
+category!(big_integer, TextBigInteger);
 
 fn run_category<T>(name: &str)
 where
@@ -118,6 +120,41 @@ impl<'de> Deserialize<'de> for Base64Binary {
                 .map_err(de::Error::custom)
         } else {
             ByteBuf::deserialize(deserializer).map(|v| Base64Binary(v.into_vec()))
+        }
+    }
+}
+
+// BigInteger can't deserialize from JSON so we need a shim
+#[derive(PartialEq, Debug)]
+struct TextBigInteger(BigInteger);
+
+impl Serialize for TextBigInteger {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for TextBigInteger {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            let v = i128::deserialize(deserializer)?;
+            let padding_bits = if v < 0 {
+                v.leading_ones()
+            } else {
+                v.leading_zeros()
+            } - 1;
+            let padding_bytes = padding_bits / 8;
+            Ok(TextBigInteger(BigInteger::from_be_bytes(
+                v.to_be_bytes()[padding_bytes as usize..].to_vec(),
+            )))
+        } else {
+            BigInteger::deserialize(deserializer).map(TextBigInteger)
         }
     }
 }
