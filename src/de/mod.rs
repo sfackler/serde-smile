@@ -1,10 +1,11 @@
 //! Deserialize Smile data into a Rust data structure.
+use crate::de::big_decimal_deserializer::BigDecimalDeserializer;
 use crate::de::big_integer_deserializer::BigIntegerDeserializer;
 use crate::de::key_deserializer::KeyDeserializer;
 use crate::de::read::{Buf, MutBuf};
 pub use crate::de::read::{IoRead, MutSliceRead, Read, SliceRead};
 use crate::de::string_cache::StringCache;
-use crate::value::BigInteger;
+use crate::value::{BigDecimal, BigInteger};
 use crate::Error;
 use serde::de::{self, DeserializeOwned, Visitor};
 use serde::{serde_if_integer128, Deserialize, Deserializer as _};
@@ -13,6 +14,7 @@ use std::convert::TryFrom;
 use std::io::BufRead;
 use std::str;
 
+mod big_decimal_deserializer;
 mod big_integer_deserializer;
 mod key_deserializer;
 mod read;
@@ -305,7 +307,10 @@ where
             }
         }
 
-        visitor.visit_map(BigIntegerDeserializer { de: self })
+        visitor.visit_map(BigIntegerDeserializer {
+            de: self,
+            done: false,
+        })
     }
 
     fn parse_f32<V>(&mut self, visitor: V) -> Result<V::Value, Error>
@@ -347,12 +352,14 @@ where
         visitor.visit_f64(value)
     }
 
-    fn parse_big_decimal<V>(&mut self, _visitor: V) -> Result<V::Value, Error>
+    fn parse_big_decimal<V>(&mut self, visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
     {
-        // FIXME support via BigDecimal "magic" type
-        Err(Error::unsupported_big_decimal())
+        visitor.visit_map(BigDecimalDeserializer {
+            de: self,
+            stage: Some(big_decimal_deserializer::Stage::Scale),
+        })
     }
 
     fn parse_short_string<V>(&mut self, len: usize, visitor: V) -> Result<V::Value, Error>
@@ -596,7 +603,22 @@ where
         if name == BigInteger::STRUCT_NAME && fields == [BigInteger::FIELD_NAME] {
             if let Some(0x26) = self.reader.peek()? {
                 self.reader.consume();
-                return visitor.visit_map(BigIntegerDeserializer { de: self });
+                return visitor.visit_map(BigIntegerDeserializer {
+                    de: self,
+                    done: false,
+                });
+            }
+        }
+
+        if name == BigDecimal::STRUCT_NAME
+            && fields == [BigDecimal::SCALE_FIELD_NAME, BigDecimal::VALUE_FIELD_NAME]
+        {
+            if let Some(0x2a) = self.reader.peek()? {
+                self.reader.consume();
+                return visitor.visit_map(BigDecimalDeserializer {
+                    de: self,
+                    stage: Some(big_decimal_deserializer::Stage::Scale),
+                });
             }
         }
 

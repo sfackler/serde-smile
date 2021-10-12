@@ -7,6 +7,7 @@ use serde::forward_to_deserialize_any;
 
 pub(crate) struct BigIntegerDeserializer<'a, 'de, R> {
     pub(crate) de: &'a mut Deserializer<'de, R>,
+    pub(crate) done: bool,
 }
 
 impl<'de, R> MapAccess<'de> for BigIntegerDeserializer<'_, 'de, R>
@@ -19,6 +20,10 @@ where
     where
         K: DeserializeSeed<'de>,
     {
+        if self.done {
+            return Ok(None);
+        }
+
         seed.deserialize(BigIntegerFieldDeserializer).map(Some)
     }
 
@@ -26,6 +31,7 @@ where
     where
         V: DeserializeSeed<'de>,
     {
+        self.done = true;
         seed.deserialize(BigIntegerValueDeserializer { de: &mut *self.de })
     }
 }

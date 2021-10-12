@@ -11,7 +11,6 @@ enum ErrorKind {
     InvalidStringReference,
     UnterminatedVint,
     BufferLengthOverflow,
-    UnsupportedBigDecimal,
     InvalidUtf8,
     RecursionLimitExceeded,
     TrailingData,
@@ -38,7 +37,6 @@ impl fmt::Display for Error {
             ErrorKind::InvalidStringReference => f.write_str("invalid string reference"),
             ErrorKind::UnterminatedVint => f.write_str("unterminated vint"),
             ErrorKind::BufferLengthOverflow => f.write_str("buffer length overflow"),
-            ErrorKind::UnsupportedBigDecimal => f.write_str("unsupported BigDecimal"),
             ErrorKind::InvalidUtf8 => f.write_str("invalid UTF-8"),
             ErrorKind::RecursionLimitExceeded => f.write_str("recursion limit exceeded"),
             ErrorKind::TrailingData => f.write_str("trailing data"),
@@ -106,10 +104,6 @@ impl Error {
 
     pub(crate) fn buffer_length_overflow() -> Self {
         Error(Box::new(ErrorKind::BufferLengthOverflow))
-    }
-
-    pub(crate) fn unsupported_big_decimal() -> Self {
-        Error(Box::new(ErrorKind::UnsupportedBigDecimal))
     }
 
     pub(crate) fn invalid_utf8() -> Self {

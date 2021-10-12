@@ -1,8 +1,8 @@
 use crate::ser::Serializer;
-use crate::value::BigInteger;
+use crate::value::{BigDecimal, BigInteger};
 use linked_hash_map::LinkedHashMap;
-use serde::de::{self, DeserializeOwned};
-use serde::{Deserialize, Serialize};
+use serde::de::{self, DeserializeOwned, IntoDeserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_bytes::ByteBuf;
 use std::ffi::OsStr;
 use std::fmt::Debug;
@@ -31,6 +31,7 @@ category!(map, LinkedHashMap<String, i32>);
 category!(shared_property, Vec<LinkedHashMap<String, i32>>);
 category!(shared_string, Vec<LinkedHashMap<String, String>>);
 category!(big_integer, TextBigInteger);
+category!(big_decimal, TextBigDecimal);
 
 fn run_category<T>(name: &str)
 where
@@ -111,7 +112,7 @@ impl Serialize for Base64Binary {
 impl<'de> Deserialize<'de> for Base64Binary {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
             let s = String::deserialize(deserializer)?;
@@ -140,7 +141,7 @@ impl Serialize for TextBigInteger {
 impl<'de> Deserialize<'de> for TextBigInteger {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
             let v = i128::deserialize(deserializer)?;
@@ -155,6 +156,41 @@ impl<'de> Deserialize<'de> for TextBigInteger {
             )))
         } else {
             BigInteger::deserialize(deserializer).map(TextBigInteger)
+        }
+    }
+}
+
+// BigDecimal can't deserialize from JSON so we need a shim
+#[derive(PartialEq, Debug)]
+struct TextBigDecimal(BigDecimal);
+
+impl Serialize for TextBigDecimal {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for TextBigDecimal {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            let v = f32::deserialize(deserializer)?.to_string();
+            let value = v.replace('.', "");
+            let value = value.parse::<i128>().unwrap();
+            let value = TextBigInteger::deserialize(value.into_deserializer())?.0;
+            let scale = match v.find('.') {
+                Some(idx) => v.len() - idx - 1,
+                None => 0,
+            };
+
+            Ok(TextBigDecimal(BigDecimal::new(value, scale as i32)))
+        } else {
+            BigDecimal::deserialize(deserializer).map(TextBigDecimal)
         }
     }
 }

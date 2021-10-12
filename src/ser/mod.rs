@@ -2,7 +2,7 @@
 use crate::ser::compound::{Compound, Mode};
 use crate::ser::key_serializer::{KeySerializer, MaybeStatic};
 use crate::ser::string_cache::StringCache;
-use crate::value::BigInteger;
+use crate::value::{BigDecimal, BigInteger};
 use crate::Error;
 use serde::ser::SerializeStruct;
 use serde::{serde_if_integer128, Serialize};
@@ -10,6 +10,7 @@ use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::io::Write;
 
+mod big_decimal_serializer;
 mod big_integer_serializer;
 mod compound;
 mod key_serializer;
@@ -273,7 +274,7 @@ where
     }
 
     fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
-        let zigzag = ((v << 1) ^ (v >> 31)) as u32 as u64;
+        let zigzag = zigzag_i32(v);
 
         if zigzag < 32 {
             self.writer
@@ -290,7 +291,7 @@ where
             Ok(v) => self.serialize_i32(v),
             Err(_) => {
                 self.writer.write_all(&[0x25]).map_err(Error::io)?;
-                let zigzag = ((v << 1) ^ (v >> 63)) as u64;
+                let zigzag = zigzag_i64(v);
                 self.serialize_vint(zigzag)
             }
         }
@@ -542,13 +543,20 @@ where
         len: usize,
     ) -> Result<Self::SerializeStruct, Self::Error> {
         if name == BigInteger::STRUCT_NAME {
-            Ok(Compound {
+            return Ok(Compound {
                 ser: self,
                 mode: Mode::BigInteger,
-            })
-        } else {
-            self.serialize_map(Some(len))
+            });
         }
+
+        if name == BigDecimal::STRUCT_NAME {
+            return Ok(Compound {
+                ser: self,
+                mode: Mode::BigDecimal,
+            });
+        }
+
+        self.serialize_map(Some(len))
     }
 
     fn serialize_struct_variant(
@@ -570,4 +578,14 @@ where
     fn is_human_readable(&self) -> bool {
         false
     }
+}
+
+#[inline]
+fn zigzag_i32(v: i32) -> u64 {
+    ((v << 1) ^ (v >> 31)) as u32 as u64
+}
+
+#[inline]
+fn zigzag_i64(v: i64) -> u64 {
+    ((v << 1) ^ (v >> 63)) as u64
 }

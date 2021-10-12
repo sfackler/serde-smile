@@ -1,6 +1,7 @@
 package com.github.sfackler.serdesmile.jackson;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,6 +47,8 @@ public final class EncodeReferences {
         processTestCases("shared_string", new TypeReference<TestCase<List<Map<String, String>>>>() {
         });
         processTestCases("big_integer", new TypeReference<TestCase<BigInteger>>() {
+        });
+        processTestCases("big_decimal", new TypeReference<TestCase<BigDecimal>>() {
         });
     }
 

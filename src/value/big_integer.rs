@@ -7,7 +7,7 @@ use std::fmt;
 /// A parsed Smile `BigInteger` value.
 ///
 /// This is a "magic" type which corresponds to the `BigInteger` type defined in Smile. It is intended to be used only
-/// for serialization and deserialization; it intentionally does *not* implement any kind of traditional big integer
+/// for serialization and deserialization, and it intentionally does *not* implement any kind of traditional big integer
 /// math API.
 ///
 /// It should only be used with the `serde-smile` serializers and deserializers; it will produce a nonsensical encoding
@@ -59,8 +59,8 @@ impl<'de> Deserialize<'de> for BigInteger {
         impl<'de> Visitor<'de> for BigIntegerVisitor {
             type Value = BigInteger;
 
-            fn expecting(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-                fmt.write_str("a big integer")
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a big integer")
             }
 
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>

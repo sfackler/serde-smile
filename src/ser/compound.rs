@@ -1,3 +1,4 @@
+use crate::ser::big_decimal_serializer::BigDecimalSerializer;
 use crate::ser::big_integer_serializer::BigIntegerSerializer;
 use crate::ser::key_serializer::KeySerializer;
 use crate::{Error, Serializer};
@@ -11,6 +12,7 @@ use std::io::Write;
 pub enum Mode {
     Normal,
     BigInteger,
+    BigDecimal,
 }
 
 pub struct Compound<'a, W> {
@@ -143,6 +145,9 @@ where
             Mode::BigInteger => value.serialize(BigIntegerSerializer {
                 ser: &mut *self.ser,
             }),
+            Mode::BigDecimal => value.serialize(BigDecimalSerializer {
+                ser: &mut *self.ser,
+            }),
             Mode::Normal => {
                 self.ser.serialize_static_key(key)?;
                 SerializeMap::serialize_value(self, value)
@@ -152,7 +157,7 @@ where
 
     fn end(self) -> Result<Self::Ok, Self::Error> {
         match self.mode {
-            Mode::BigInteger => Ok(()),
+            Mode::BigInteger | Mode::BigDecimal => Ok(()),
             Mode::Normal => SerializeMap::end(self),
         }
     }
