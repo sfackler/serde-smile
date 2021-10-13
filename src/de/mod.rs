@@ -135,7 +135,10 @@ where
 
     /// Consumes the deserializer, returning an iterator over values of type `T`.
     #[allow(clippy::should_implement_trait)]
-    pub fn into_iter<T>(self) -> StreamDeserializer<'de, R, T> {
+    pub fn into_iter<T>(self) -> StreamDeserializer<'de, R, T>
+    where
+        T: Deserialize<'de>,
+    {
         StreamDeserializer {
             de: self,
             done: false,
