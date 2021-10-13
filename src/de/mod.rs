@@ -4,6 +4,7 @@ use crate::de::big_integer_deserializer::BigIntegerDeserializer;
 use crate::de::key_deserializer::KeyDeserializer;
 use crate::de::read::{Buf, MutBuf};
 pub use crate::de::read::{IoRead, MutSliceRead, Read, SliceRead};
+pub use crate::de::stream_deserializer::StreamDeserializer;
 use crate::de::string_cache::StringCache;
 use crate::value::{BigDecimal, BigInteger};
 use crate::Error;
@@ -12,12 +13,14 @@ use serde::{serde_if_integer128, Deserialize, Deserializer as _};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::io::BufRead;
+use std::marker::PhantomData;
 use std::str;
 
 mod big_decimal_deserializer;
 mod big_integer_deserializer;
 mod key_deserializer;
 mod read;
+mod stream_deserializer;
 mod string_cache;
 
 /// Deserializes an instance of type `T` from a slice of Smile data.
@@ -128,6 +131,15 @@ where
                 None
             },
         })
+    }
+
+    /// Consumes the deserializer, returning an iterator over values of type `T`.
+    pub fn into_iter<T>(self) -> StreamDeserializer<'de, R, T> {
+        StreamDeserializer {
+            de: self,
+            done: false,
+            _p: PhantomData,
+        }
     }
 
     /// Validates that all Smile data has been consumed from the input.
