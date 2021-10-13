@@ -286,7 +286,7 @@ where
         let buf = self.parse_7_bit_binary()?;
 
         if buf.is_empty() {
-            return visitor.visit_u8(0);
+            return visitor.visit_map(BigIntegerDeserializer { buf: Some(buf) });
         }
 
         if buf.len() <= 8 {
