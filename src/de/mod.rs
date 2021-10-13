@@ -323,10 +323,7 @@ where
             }
         }
 
-        visitor.visit_map(BigIntegerDeserializer {
-            de: self,
-            done: false,
-        })
+        visitor.visit_map(BigIntegerDeserializer { buf: Some(buf) })
     }
 
     fn parse_f32<V>(&mut self, visitor: V) -> Result<V::Value, Error>
@@ -619,10 +616,8 @@ where
         if name == BigInteger::STRUCT_NAME && fields == [BigInteger::FIELD_NAME] {
             if let Some(0x26) = self.reader.peek()? {
                 self.reader.consume();
-                return visitor.visit_map(BigIntegerDeserializer {
-                    de: self,
-                    done: false,
-                });
+                let buf = self.parse_7_bit_binary()?;
+                return visitor.visit_map(BigIntegerDeserializer { buf: Some(buf) });
             }
         }
 

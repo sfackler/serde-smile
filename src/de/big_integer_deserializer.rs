@@ -1,27 +1,22 @@
 use crate::de::read::Buf;
-use crate::de::Read;
 use crate::value::BigInteger;
-use crate::{Deserializer, Error};
+use crate::Error;
 use serde::de::value::BorrowedStrDeserializer;
 use serde::de::{DeserializeSeed, MapAccess, Visitor};
 use serde::forward_to_deserialize_any;
 
-pub(crate) struct BigIntegerDeserializer<'a, 'de, R> {
-    pub(crate) de: &'a mut Deserializer<'de, R>,
-    pub(crate) done: bool,
+pub(crate) struct BigIntegerDeserializer<'a, 'de> {
+    pub(crate) buf: Option<Buf<'a, 'de>>,
 }
 
-impl<'de, R> MapAccess<'de> for BigIntegerDeserializer<'_, 'de, R>
-where
-    R: Read<'de>,
-{
+impl<'de> MapAccess<'de> for BigIntegerDeserializer<'_, 'de> {
     type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
     where
         K: DeserializeSeed<'de>,
     {
-        if self.done {
+        if self.buf.is_none() {
             return Ok(None);
         }
 
@@ -33,27 +28,24 @@ where
     where
         V: DeserializeSeed<'de>,
     {
-        self.done = true;
-        seed.deserialize(BigIntegerValueDeserializer { de: &mut *self.de })
+        seed.deserialize(BigIntegerValueDeserializer {
+            buf: self.buf.take().expect("next_value_seed called after end"),
+        })
     }
 }
 
-struct BigIntegerValueDeserializer<'a, 'de, R> {
-    de: &'a mut Deserializer<'de, R>,
+struct BigIntegerValueDeserializer<'a, 'de> {
+    buf: Buf<'a, 'de>,
 }
 
-impl<'de, R> serde::Deserializer<'de> for BigIntegerValueDeserializer<'_, 'de, R>
-where
-    R: Read<'de>,
-{
+impl<'de> serde::Deserializer<'de> for BigIntegerValueDeserializer<'_, 'de> {
     type Error = Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: Visitor<'de>,
     {
-        let buf = self.de.parse_7_bit_binary()?;
-        match buf {
+        match self.buf {
             Buf::Short(buf) => visitor.visit_bytes(buf),
             Buf::Long(buf) => visitor.visit_borrowed_bytes(buf),
         }
