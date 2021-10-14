@@ -54,29 +54,38 @@ impl<'de> Deserialize<'de> for BigInteger {
     where
         D: Deserializer<'de>,
     {
-        struct BigIntegerVisitor;
-
-        impl<'de> Visitor<'de> for BigIntegerVisitor {
-            type Value = BigInteger;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a big integer")
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                let value = map.next_key::<BigIntegerKey>()?;
-                if value.is_none() {
-                    return Err(de::Error::custom("big integer key not found"));
-                }
-                map.next_value::<ByteBuf>()
-                    .map(|b| BigInteger(b.into_vec()))
-            }
-        }
-
         deserializer.deserialize_struct(Self::STRUCT_NAME, &[Self::FIELD_NAME], BigIntegerVisitor)
+    }
+}
+
+pub(crate) struct BigIntegerVisitor;
+
+impl BigIntegerVisitor {
+    pub(crate) fn finish_map<'de, A>(self, mut map: A) -> Result<BigInteger, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        map.next_value::<ByteBuf>()
+            .map(|b| BigInteger(b.into_vec()))
+    }
+}
+
+impl<'de> Visitor<'de> for BigIntegerVisitor {
+    type Value = BigInteger;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a big integer")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let value = map.next_key::<BigIntegerKey>()?;
+        if value.is_none() {
+            return Err(de::Error::custom("big integer key not found"));
+        }
+        self.finish_map(map)
     }
 }
 

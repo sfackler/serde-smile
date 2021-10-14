@@ -1,6 +1,6 @@
 use crate::ser::Serializer;
 use crate::value::{BigDecimal, BigInteger};
-use linked_hash_map::LinkedHashMap;
+use indexmap::IndexMap;
 use serde::de::{self, DeserializeOwned, IntoDeserializer};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_bytes::ByteBuf;
@@ -27,9 +27,9 @@ category!(boolean, bool);
 category!(binary, Base64Binary);
 category!(null, ());
 category!(list, Vec<String>);
-category!(map, LinkedHashMap<String, i32>);
-category!(shared_property, Vec<LinkedHashMap<String, i32>>);
-category!(shared_string, Vec<LinkedHashMap<String, String>>);
+category!(map, IndexMap<String, i32>);
+category!(shared_property, Vec<IndexMap<String, i32>>);
+category!(shared_string, Vec<IndexMap<String, String>>);
 category!(big_integer, TextBigInteger);
 category!(big_decimal, TextBigDecimal);
 

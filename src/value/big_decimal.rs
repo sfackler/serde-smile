@@ -71,46 +71,51 @@ impl<'de> Deserialize<'de> for BigDecimal {
     where
         D: Deserializer<'de>,
     {
-        struct BigDecimalVisitor;
-
-        impl<'de> Visitor<'de> for BigDecimalVisitor {
-            type Value = BigDecimal;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a big decimal")
-            }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                match map.next_key::<BigDecimalKey>()? {
-                    Some(BigDecimalKey::Scale) => {}
-                    Some(_) | None => {
-                        return Err(de::Error::custom("expected big decimal scale field"))
-                    }
-                }
-                let scale = map.next_value()?;
-
-                match map.next_key::<BigDecimalKey>()? {
-                    Some(BigDecimalKey::Value) => {}
-                    Some(_) | None => {
-                        return Err(de::Error::custom("expected big decimal value field"))
-                    }
-                }
-                let value = map
-                    .next_value::<ByteBuf>()
-                    .map(|b| BigInteger::from_be_bytes(b.into_vec()))?;
-
-                Ok(BigDecimal { scale, value })
-            }
-        }
-
         deserializer.deserialize_struct(
             Self::STRUCT_NAME,
             &[Self::SCALE_FIELD_NAME, Self::VALUE_FIELD_NAME],
             BigDecimalVisitor,
         )
+    }
+}
+
+pub(crate) struct BigDecimalVisitor;
+
+impl BigDecimalVisitor {
+    pub(crate) fn finish_map<'de, A>(self, mut map: A) -> Result<BigDecimal, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let scale = map.next_value()?;
+
+        match map.next_key::<BigDecimalKey>()? {
+            Some(BigDecimalKey::Value) => {}
+            Some(_) | None => return Err(de::Error::custom("expected big decimal value field")),
+        }
+        let value = map
+            .next_value::<ByteBuf>()
+            .map(|b| BigInteger::from_be_bytes(b.into_vec()))?;
+
+        Ok(BigDecimal { scale, value })
+    }
+}
+
+impl<'de> Visitor<'de> for BigDecimalVisitor {
+    type Value = BigDecimal;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a big decimal")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        match map.next_key::<BigDecimalKey>()? {
+            Some(BigDecimalKey::Scale) => {}
+            Some(_) | None => return Err(de::Error::custom("expected big decimal scale field")),
+        }
+        self.finish_map(map)
     }
 }
 
