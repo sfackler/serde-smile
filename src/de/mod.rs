@@ -24,6 +24,8 @@ mod stream_deserializer;
 mod string_cache;
 
 /// Deserializes an instance of type `T` from a slice of Smile data.
+///
+/// Strings and raw binary values can be borrowed from the input slice, but 7-bit encoded binary data cannot.
 pub fn from_slice<'de, T>(slice: &'de [u8]) -> Result<T, Error>
 where
     T: Deserialize<'de>,
@@ -35,6 +37,9 @@ where
 }
 
 /// Deserializes an instance of type `T` from a mutable slice of Smile data.
+///
+/// All strings and binary values can be borrowed from the input slice. However, the contents of the slice are
+/// unspecified after deserialization.
 pub fn from_mut_slice<'de, T>(slice: &'de mut [u8]) -> Result<T, Error>
 where
     T: Deserialize<'de>,
@@ -46,6 +51,8 @@ where
 }
 
 /// Deserializes an instance of type `T` from an IO stream of Smile data.
+///
+/// No strings or binary data can be borrowed from the input.
 pub fn from_reader<T, R>(reader: R) -> Result<T, Error>
 where
     T: DeserializeOwned,

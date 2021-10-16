@@ -32,6 +32,53 @@
 //! Rust integer values that cannot be stored in an `i64` will be serialized as Smile `BigInteger` values. In the other
 //! direction, `BigInteger` values will be deserialized to Rust integer types if the value is small enough.
 //!
+//! # Examples
+//!
+//! Serialize a Rust object into a Smile value:
+//! ```rust
+//! use serde::Serialize;
+//! use serde_smile::Error;
+//!
+//! #[derive(Serialize)]
+//! struct Address {
+//!     number: u32,
+//!     street: String,
+//! }
+//!
+//! fn main() -> Result<(), Error> {
+//!     let address = Address {
+//!         number: 1600,
+//!         street: "Pennsylvania Avenue".to_string(),
+//!     };
+//!
+//!     let value = serde_smile::to_vec(&address)?;
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! Deserialize a Smile value into a Rust object:
+//! ```rust
+//! use serde::Deserialize;
+//! use serde_smile::Error;
+//!
+//! #[derive(Deserialize)]
+//! struct Address {
+//!     number: u32,
+//!     street: String,
+//! }
+//!
+//! fn main() -> Result<(), Error> {
+//!     let smile = b":)\n\x01\xfa\x85number\x24\x32\x80\x85street\x52Pennsylvania Avenue\xfb";
+//!
+//!     let address: Address = serde_smile::from_slice(smile)?;
+//!
+//!     println!("{} {}", address.number, address.street);
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
 //! [Smile]: https://github.com/FasterXML/smile-format-specification
 //! [`Builder::raw_binary`]: ser::Builder::raw_binary
 //! [`Builder::shared_strings`]: ser::Builder::shared_strings
