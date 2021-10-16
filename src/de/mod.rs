@@ -78,7 +78,7 @@ impl<'de> Deserializer<'de, MutSliceRead<'de>> {
     /// Creates a `Deserializer` from a mutable slice.
     ///
     /// All strings and binary values can be borrowed from the input slice. However, the contents of the slice are
-    /// indeterminate after deserialization.
+    /// unspecified after deserialization.
     pub fn from_mut_slice(slice: &'de mut [u8]) -> Result<Self, Error> {
         Deserializer::new(MutSliceRead::new(slice))
     }
