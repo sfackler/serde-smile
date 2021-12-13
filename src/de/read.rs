@@ -174,7 +174,7 @@ impl private::Sealed for MutSliceRead<'_> {}
 impl<'de> Read<'de> for MutSliceRead<'de> {
     fn next(&mut self) -> Result<Option<u8>, Error> {
         if !self.slice.is_empty() {
-            let slice = mem::replace(&mut self.slice, &mut []);
+            let slice = mem::take(&mut self.slice);
             let b = slice[0];
 
             self.slice = &mut slice[1..];
@@ -193,13 +193,13 @@ impl<'de> Read<'de> for MutSliceRead<'de> {
     }
 
     fn consume(&mut self) {
-        let slice = mem::replace(&mut self.slice, &mut []);
+        let slice = mem::take(&mut self.slice);
         self.slice = &mut slice[1..];
     }
 
     fn read<'a>(&'a mut self, n: usize) -> Result<Option<Buf<'a, 'de>>, Error> {
         if n <= self.slice.len() {
-            let (a, b) = mem::replace(&mut self.slice, &mut []).split_at_mut(n);
+            let (a, b) = mem::take(&mut self.slice).split_at_mut(n);
             self.slice = b;
             Ok(Some(Buf::Long(a)))
         } else {
@@ -209,7 +209,7 @@ impl<'de> Read<'de> for MutSliceRead<'de> {
 
     fn read_mut<'a>(&'a mut self, n: usize) -> Result<Option<MutBuf<'a, 'de>>, Error> {
         if n <= self.slice.len() {
-            let (a, b) = mem::replace(&mut self.slice, &mut []).split_at_mut(n);
+            let (a, b) = mem::take(&mut self.slice).split_at_mut(n);
             self.slice = b;
             Ok(Some(MutBuf::Long(a)))
         } else {
@@ -220,7 +220,7 @@ impl<'de> Read<'de> for MutSliceRead<'de> {
     fn read_until<'a>(&'a mut self, end: u8) -> Result<Option<Buf<'a, 'de>>, Error> {
         match memchr(end, self.slice) {
             Some(end) => {
-                let (a, b) = mem::replace(&mut self.slice, &mut []).split_at_mut(end);
+                let (a, b) = mem::take(&mut self.slice).split_at_mut(end);
                 self.slice = &mut b[1..];
                 Ok(Some(Buf::Long(a)))
             }
