@@ -247,6 +247,21 @@ where
         }
     }
 
+    /// Returns a shared reference to the inner reader.
+    pub fn get_ref(&self) -> &R {
+        &self.reader
+    }
+
+    /// Returns a mutable reference to the inner reader.
+    pub fn get_mut(&mut self) -> &mut R {
+        &mut self.reader
+    }
+
+    /// Consumes the `IoRead`, returning the inner reader.
+    pub fn into_inner(self) -> R {
+        self.reader
+    }
+
     fn fill_buf(&mut self, n: usize) -> Result<bool, Error> {
         self.buf.clear();
         // defend against malicious input pretending to be huge by limiting growth

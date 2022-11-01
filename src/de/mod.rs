@@ -140,6 +140,21 @@ where
         })
     }
 
+    /// Returns a shared reference to the inner reader.
+    pub fn get_ref(&self) -> &R {
+        &self.reader
+    }
+
+    /// Returns a mutable reference to the inner reader.
+    pub fn get_mut(&mut self) -> &mut R {
+        &mut self.reader
+    }
+
+    /// Consumes the `Deserializer`, returning the inner reader.
+    pub fn into_inner(self) -> R {
+        self.reader
+    }
+
     /// Consumes the deserializer, returning an iterator over values of type `T`.
     #[allow(clippy::should_implement_trait)]
     pub fn into_iter<T>(self) -> StreamDeserializer<'de, R, T>

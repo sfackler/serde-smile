@@ -143,6 +143,16 @@ where
         self.writer.write_all(&[0xff]).map_err(Error::io)
     }
 
+    /// Returns a shared reference to the inner writer.
+    pub fn get_ref(&self) -> &W {
+        &self.writer
+    }
+
+    /// Returns a mutable reference to the inner writer.
+    pub fn get_mut(&mut self) -> &mut W {
+        &mut self.writer
+    }
+
     /// Consumes the `Serializer`, returning the inner writer.
     pub fn into_inner(self) -> W {
         self.writer
