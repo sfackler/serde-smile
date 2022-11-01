@@ -12,7 +12,7 @@ use std::fmt;
 ///
 /// It should only be used with the `serde-smile` serializers and deserializers; it will produce a nonsensical encoding
 /// when used with other `serde` libraries.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct BigInteger(Vec<u8>);
 
 impl BigInteger {
