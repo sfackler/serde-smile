@@ -316,8 +316,8 @@ where
 
     fn deref(&self) -> &Self::Target {
         match self {
-            MaybeStatic::Static(v) => *v,
-            MaybeStatic::Nonstatic(v) => *v,
+            MaybeStatic::Static(v) => v,
+            MaybeStatic::Nonstatic(v) => v,
         }
     }
 }

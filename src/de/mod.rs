@@ -208,7 +208,7 @@ where
             .and_then(|c| c.get(reference))
             .ok_or_else(Error::invalid_string_reference)?;
         match s {
-            Cow::Borrowed(s) => visitor.visit_borrowed_str(*s),
+            Cow::Borrowed(s) => visitor.visit_borrowed_str(s),
             Cow::Owned(s) => visitor.visit_str(s),
         }
     }

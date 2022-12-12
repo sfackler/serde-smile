@@ -261,8 +261,8 @@ impl Deref for Str<'_, '_> {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Str::Short(s) => *s,
-            Str::Long(s) => *s,
+            Str::Short(s) => s,
+            Str::Long(s) => s,
         }
     }
 }

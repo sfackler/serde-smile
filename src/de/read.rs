@@ -43,8 +43,8 @@ impl Deref for Buf<'_, '_> {
     #[inline]
     fn deref(&self) -> &Self::Target {
         match self {
-            Buf::Short(buf) => *buf,
-            Buf::Long(buf) => *buf,
+            Buf::Short(buf) => buf,
+            Buf::Long(buf) => buf,
         }
     }
 }
@@ -60,8 +60,8 @@ impl Deref for MutBuf<'_, '_> {
     #[inline]
     fn deref(&self) -> &Self::Target {
         match self {
-            MutBuf::Short(buf) => *buf,
-            MutBuf::Long(buf) => *buf,
+            MutBuf::Short(buf) => buf,
+            MutBuf::Long(buf) => buf,
         }
     }
 }
@@ -70,8 +70,8 @@ impl DerefMut for MutBuf<'_, '_> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
-            MutBuf::Short(buf) => *buf,
-            MutBuf::Long(buf) => *buf,
+            MutBuf::Short(buf) => buf,
+            MutBuf::Long(buf) => buf,
         }
     }
 }
