@@ -1,5 +1,7 @@
 use crate::ser::Serializer;
 use crate::value::{BigDecimal, BigInteger};
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use indexmap::IndexMap;
 use serde::de::{self, DeserializeOwned, IntoDeserializer};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -116,7 +118,8 @@ impl<'de> Deserialize<'de> for Base64Binary {
     {
         if deserializer.is_human_readable() {
             let s = String::deserialize(deserializer)?;
-            base64::decode(&s)
+            STANDARD
+                .decode(s)
                 .map(Base64Binary)
                 .map_err(de::Error::custom)
         } else {
