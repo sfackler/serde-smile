@@ -243,7 +243,7 @@ where
     where
         V: Visitor<'de>,
     {
-        let vint = self.parse_vint(10)? as u64;
+        let vint = self.parse_vint(10)?;
         let decoded = zigzag_i64(vint);
         visitor.visit_i64(decoded)
     }
