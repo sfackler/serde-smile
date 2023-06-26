@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 itoa = "1"
-indexmap = { version = "1", features = ["serde-2"] }
+indexmap = { version = "2", features = ["serde-1"] }
 memchr = "2"
 serde = "1"
 serde_bytes = "0.11"
