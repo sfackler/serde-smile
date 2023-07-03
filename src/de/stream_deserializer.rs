@@ -26,6 +26,11 @@ where
             return None;
         }
 
+        if let Err(e) = self.de.read_header() {
+            self.done = true;
+            return Some(Err(e));
+        }
+
         match self.de.reader.peek() {
             Ok(Some(0xff)) => {
                 self.de.reader.consume();

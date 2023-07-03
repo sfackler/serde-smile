@@ -32,7 +32,7 @@ where
     W: Write,
     T: ?Sized + Serialize,
 {
-    let mut serializer = Serializer::new(writer)?;
+    let mut serializer = Serializer::new(writer);
     value.serialize(&mut serializer)
 }
 
@@ -71,8 +71,8 @@ impl Builder {
         self
     }
 
-    /// Creates a new [`Serializer`], writing the Smile header to the writer.
-    pub fn build<W>(&self, mut writer: W) -> Result<Serializer<W>, Error>
+    /// Creates a new [`Serializer`].
+    pub fn build<W>(&self, writer: W) -> Serializer<W>
     where
         W: Write,
     {
@@ -86,11 +86,11 @@ impl Builder {
         if self.shared_properties {
             flags |= 0x01;
         }
-        let buf = [b':', b')', b'\n', flags];
-        writer.write_all(&buf).map_err(Error::io)?;
+        let header = [b':', b')', b'\n', flags];
 
-        Ok(Serializer {
+        Serializer {
             writer,
+            header: Some(header),
             raw_binary: self.raw_binary,
             shared_strings: if self.shared_strings {
                 Some(StringCache::new())
@@ -102,13 +102,14 @@ impl Builder {
             } else {
                 None
             },
-        })
+        }
     }
 }
 
 /// A structure for serializing Rust values into Smile.
 pub struct Serializer<W> {
     writer: W,
+    header: Option<[u8; 4]>,
     raw_binary: bool,
     shared_strings: Option<StringCache>,
     shared_properties: Option<StringCache>,
@@ -129,17 +130,29 @@ impl<W> Serializer<W>
 where
     W: Write,
 {
-    /// Creates a new `Serializer` with default settings, writing the Smile header to the writer.
-    pub fn new(writer: W) -> Result<Self, Error> {
+    /// Creates a new `Serializer` with default settings.
+    pub fn new(writer: W) -> Self {
         Serializer::builder().build(writer)
+    }
+
+    /// Writes the Smile header to the writer, if not already written.
+    ///
+    /// This will happen automatically when the first value is serialized, but this method can be
+    /// used to explicitly write it if desired.
+    pub fn write_header(&mut self) -> Result<(), Error> {
+        let Some(header) = self.header.take() else { return Ok(()) };
+        self.writer.write_all(&header).map_err(Error::io)?;
+        Ok(())
     }
 
     /// Writes the Smile end of stream token to the writer.
     ///
-    /// The end of stream indicator is not required in a Smile encoding, but can help with framing in some contexts.
+    /// The end of stream indicator is not required in a Smile encoding, but can help with framing
+    /// in some contexts.
     ///
     /// This should only be called after serializing all data.
     pub fn end(&mut self) -> Result<(), Error> {
+        self.write_header()?;
         self.writer.write_all(&[0xff]).map_err(Error::io)
     }
 
@@ -239,6 +252,7 @@ where
     }
 
     fn serialize_big_integer(&mut self, v: &[u8]) -> Result<(), Error> {
+        self.write_header()?;
         self.writer.write_all(&[0x26]).map_err(Error::io)?;
         self.serialize_7_bit_binary(v)
     }
@@ -271,6 +285,7 @@ where
     type SerializeStructVariant = Compound<'a, W>;
 
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error> {
+        self.write_header()?;
         let b = if v { 0x23 } else { 0x22 };
         self.writer.write_all(&[b]).map_err(Error::io)
     }
@@ -284,6 +299,7 @@ where
     }
 
     fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
+        self.write_header()?;
         let zigzag = zigzag_i32(v);
 
         if zigzag < 32 {
@@ -300,6 +316,7 @@ where
         match i32::try_from(v) {
             Ok(v) => self.serialize_i32(v),
             Err(_) => {
+                self.write_header()?;
                 self.writer.write_all(&[0x25]).map_err(Error::io)?;
                 let zigzag = zigzag_i64(v);
                 self.serialize_vint(zigzag)
@@ -357,6 +374,7 @@ where
     // to match with the Java implementation, we encode floats with sign extension and doubles without!
     // https://github.com/FasterXML/jackson-dataformats-binary/issues/300
     fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
+        self.write_header()?;
         let bits = v.to_bits() as i32;
         let buf = [
             0x28,
@@ -370,6 +388,7 @@ where
     }
 
     fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error> {
+        self.write_header()?;
         let bits = v.to_bits();
         let buf = [
             0x29,
@@ -392,6 +411,7 @@ where
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
+        self.write_header()?;
         if v.is_empty() {
             return self.writer.write_all(&[0x20]).map_err(Error::io);
         }
@@ -439,6 +459,7 @@ where
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
+        self.write_header()?;
         if self.raw_binary {
             self.writer.write_all(&[0xfd]).map_err(Error::io)?;
             self.serialize_vint(v.len() as u64)?;
@@ -461,6 +482,7 @@ where
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
+        self.write_header()?;
         self.writer.write_all(&[0x21]).map_err(Error::io)
     }
 
@@ -504,6 +526,7 @@ where
     }
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+        self.write_header()?;
         self.writer.write_all(&[0xf8]).map_err(Error::io)?;
         Ok(Compound {
             ser: self,
@@ -530,6 +553,7 @@ where
         variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant, Self::Error> {
+        self.write_header()?;
         self.writer.write_all(&[0xfa]).map_err(Error::io)?;
         self.serialize_static_key(variant)?;
         self.writer.write_all(&[0xf8]).map_err(Error::io)?;
@@ -540,6 +564,7 @@ where
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
+        self.write_header()?;
         self.writer.write_all(&[0xfa]).map_err(Error::io)?;
         Ok(Compound {
             ser: self,
@@ -576,6 +601,7 @@ where
         variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant, Self::Error> {
+        self.write_header()?;
         self.writer.write_all(&[0xfa]).map_err(Error::io)?;
         self.serialize_static_key(variant)?;
         self.writer.write_all(&[0xfa]).map_err(Error::io)?;

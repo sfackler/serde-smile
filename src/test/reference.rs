@@ -64,8 +64,7 @@ where
         .raw_binary(test_case.raw_binary)
         .shared_strings(test_case.shared_strings)
         .shared_properties(test_case.shared_properties)
-        .build(vec![])
-        .unwrap();
+        .build(vec![]);
     test_case.value.serialize(&mut serializer).unwrap();
     if test_case.write_end_marker {
         serializer.end().unwrap()

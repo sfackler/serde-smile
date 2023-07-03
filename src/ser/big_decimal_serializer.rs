@@ -43,6 +43,7 @@ where
     }
 
     fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
+        self.ser.write_header()?;
         self.ser.writer.write_all(&[0x2a]).map_err(Error::io)?;
         self.ser.serialize_vint(zigzag_i32(v))
     }
