@@ -30,7 +30,7 @@ pub fn from_slice<'de, T>(slice: &'de [u8]) -> Result<T, Error>
 where
     T: Deserialize<'de>,
 {
-    let mut de = Deserializer::from_slice(slice)?;
+    let mut de = Deserializer::from_slice(slice);
     let value = T::deserialize(&mut de)?;
     de.end()?;
     Ok(value)
@@ -44,7 +44,7 @@ pub fn from_mut_slice<'de, T>(slice: &'de mut [u8]) -> Result<T, Error>
 where
     T: Deserialize<'de>,
 {
-    let mut de = Deserializer::from_mut_slice(slice)?;
+    let mut de = Deserializer::from_mut_slice(slice);
     let value = T::deserialize(&mut de)?;
     de.end()?;
     Ok(value)
@@ -58,7 +58,7 @@ where
     T: DeserializeOwned,
     R: BufRead,
 {
-    let mut de = Deserializer::from_reader(reader)?;
+    let mut de = Deserializer::from_reader(reader);
     let value = T::deserialize(&mut de)?;
     de.end()?;
     Ok(value)
@@ -68,6 +68,7 @@ where
 pub struct Deserializer<'de, R> {
     reader: R,
     remaining_depth: u8,
+    initialized: bool,
     shared_strings: Option<StringCache<'de>>,
     shared_properties: Option<StringCache<'de>>,
 }
@@ -76,7 +77,7 @@ impl<'de> Deserializer<'de, SliceRead<'de>> {
     /// Creates a `Deserializer` from a shared slice.
     ///
     /// Strings and raw binary values can be borrowed from the input slice, but 7-bit encoded binary data cannot.
-    pub fn from_slice(slice: &'de [u8]) -> Result<Self, Error> {
+    pub fn from_slice(slice: &'de [u8]) -> Self {
         Deserializer::new(SliceRead::new(slice))
     }
 }
@@ -86,7 +87,7 @@ impl<'de> Deserializer<'de, MutSliceRead<'de>> {
     ///
     /// All strings and binary values can be borrowed from the input slice. However, the contents of the slice are
     /// unspecified after deserialization.
-    pub fn from_mut_slice(slice: &'de mut [u8]) -> Result<Self, Error> {
+    pub fn from_mut_slice(slice: &'de mut [u8]) -> Self {
         Deserializer::new(MutSliceRead::new(slice))
     }
 }
@@ -98,7 +99,7 @@ where
     /// Creates a `Deserializer` from a buffered IO stream.
     ///
     /// No strings or binary data can be borrowed from the input.
-    pub fn from_reader(reader: R) -> Result<Self, Error> {
+    pub fn from_reader(reader: R) -> Self {
         Deserializer::new(IoRead::new(reader))
     }
 }
@@ -111,33 +112,14 @@ where
     ///
     /// The [`Self::from_slice`], [`Self::from_mut_slice`], and [`Self::from_reader`] constructors should generally be
     /// preferred to this.
-    pub fn new(mut reader: R) -> Result<Self, Error> {
-        let header = reader
-            .read(4)?
-            .ok_or_else(Error::eof_while_parsing_header)?;
-        if !header.starts_with(b":)\n") {
-            return Err(Error::invalid_header());
-        }
-
-        let info = header[3];
-        if info & 0xf0 != 0 {
-            return Err(Error::unsupported_version());
-        }
-
-        Ok(Deserializer {
+    pub fn new(reader: R) -> Self {
+        Deserializer {
             reader,
             remaining_depth: 128,
-            shared_strings: if info & 0x02 != 0 {
-                Some(StringCache::new())
-            } else {
-                None
-            },
-            shared_properties: if info & 0x01 != 0 {
-                Some(StringCache::new())
-            } else {
-                None
-            },
-        })
+            initialized: false,
+            shared_strings: None,
+            shared_properties: None,
+        }
     }
 
     /// Returns a shared reference to the inner reader.
@@ -168,10 +150,48 @@ where
         }
     }
 
+    /// Reads the Smile header from the reader, if necessary.
+    ///
+    /// The deserializer will automatically read the header when deserializing the first value, but
+    /// this method can be used to explicitly read it if desired.
+    pub fn read_header(&mut self) -> Result<(), Error> {
+        if self.initialized {
+            return Ok(());
+        }
+        self.initialized = true;
+
+        let header = self
+            .reader
+            .read(4)?
+            .ok_or_else(Error::eof_while_parsing_header)?;
+        if !header.starts_with(b":)\n") {
+            return Err(Error::invalid_header());
+        }
+
+        let info = header[3];
+        if info & 0xf0 != 0 {
+            return Err(Error::unsupported_version());
+        }
+
+        self.shared_strings = if info & 0x02 != 0 {
+            Some(StringCache::new())
+        } else {
+            None
+        };
+        self.shared_properties = if info & 0x01 != 0 {
+            Some(StringCache::new())
+        } else {
+            None
+        };
+
+        Ok(())
+    }
+
     /// Validates that all Smile data has been consumed from the input.
     ///
     /// Both the Smile end-of-stream token and an actual EOF from the input are considered valid ends.
     pub fn end(&mut self) -> Result<(), Error> {
+        self.read_header()?;
         match self.reader.next()? {
             Some(0xff) => Ok(()),
             Some(_) => Err(Error::trailing_data()),
@@ -573,6 +593,7 @@ where
     where
         V: Visitor<'de>,
     {
+        self.read_header()?;
         self.parse_value(visitor)
     }
 
@@ -580,6 +601,7 @@ where
     where
         V: Visitor<'de>,
     {
+        self.read_header()?;
         match self.reader.peek()? {
             Some(0x21) => {
                 self.reader.consume();
@@ -609,6 +631,7 @@ where
     where
         V: Visitor<'de>,
     {
+        self.read_header()?;
         match self.reader.peek()? {
             Some(0xfa) => {
                 self.reader.consume();
@@ -635,6 +658,7 @@ where
     where
         V: Visitor<'de>,
     {
+        self.read_header()?;
         if name == BigInteger::STRUCT_NAME && fields == [BigInteger::FIELD_NAME] {
             if let Some(0x26) = self.reader.peek()? {
                 self.reader.consume();
