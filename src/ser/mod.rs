@@ -140,7 +140,9 @@ where
     /// This will happen automatically when the first value is serialized, but this method can be
     /// used to explicitly write it if desired.
     pub fn write_header(&mut self) -> Result<(), Error> {
-        let Some(header) = self.header.take() else { return Ok(()) };
+        let Some(header) = self.header.take() else {
+            return Ok(());
+        };
         self.writer.write_all(&header).map_err(Error::io)?;
         Ok(())
     }

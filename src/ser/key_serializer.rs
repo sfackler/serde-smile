@@ -301,10 +301,7 @@ where
     T: ?Sized,
 {
     fn clone(&self) -> Self {
-        match self {
-            MaybeStatic::Static(v) => MaybeStatic::Static(*v),
-            MaybeStatic::Nonstatic(v) => MaybeStatic::Nonstatic(*v),
-        }
+        *self
     }
 }
 
