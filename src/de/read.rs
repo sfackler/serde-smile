@@ -345,7 +345,7 @@ where
                     return Ok(Some(Buf::Short(&self.buf)));
                 }
                 None => {
-                    self.buf.extend(buf);
+                    self.buf.extend_from_slice(buf);
                     let len = buf.len();
                     self.reader.consume(len);
                 }
