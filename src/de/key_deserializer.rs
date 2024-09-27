@@ -182,7 +182,7 @@ where
 
     #[inline]
     fn is_human_readable(&self) -> bool {
-        false
+        true
     }
 }
 

@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug, Display};
 use std::hash::Hash;
 use std::iter::FromIterator;
+use uuid::Uuid;
 
 fn run_test<T>(key: T)
 where
@@ -100,4 +101,9 @@ impl Display for TestNewtype {
 #[test]
 fn newtype_keys() {
     run_test(TestNewtype("hello".to_string()))
+}
+
+#[test]
+fn uuid_keys() {
+    run_test(Uuid::nil())
 }
