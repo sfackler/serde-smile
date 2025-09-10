@@ -10,7 +10,7 @@ pub struct StringCache<'de> {
 impl<'de> StringCache<'de> {
     pub fn new() -> Self {
         StringCache { 
-            vec: Vec::with_capacity(LIMIT),
+            vec: vec![],
             count: 0,
         }
     }
@@ -21,11 +21,7 @@ impl<'de> StringCache<'de> {
         if self.vec.len() >= LIMIT {
             // Cache is full - implement Jackson's exact wrap-around behavior
             let index = self.count % LIMIT;
-            if index < self.vec.len() {
-                self.vec[index] = s;
-            } else {
-                self.vec.push(s);
-            }
+            self.vec[index] = s;
             self.count += 1;
         } else {
             // Cache not full - normal append
@@ -36,5 +32,59 @@ impl<'de> StringCache<'de> {
 
     pub fn get(&self, reference: u16) -> Option<&Cow<'de, str>> {
         self.vec.get(reference as usize)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::borrow::Cow;
+
+    #[test]
+    fn test_wrap_around_behavior() {
+        let mut cache = StringCache::new();
+        
+        // Fill cache to limit
+        for i in 0..1024 {
+            cache.intern(Cow::Owned(format!("string_{}", i)));
+        }
+        
+        assert_eq!(cache.vec.len(), 1024);
+        assert_eq!(cache.count, 1024);
+        
+        // Verify first entry
+        if let Some(s) = cache.get(0) {
+            assert_eq!(s, "string_0");
+        }
+        
+        // Add more entries - should wrap around
+        cache.intern(Cow::Owned("new_string_0".to_string()));
+        
+        // Should still have 1024 entries
+        assert_eq!(cache.vec.len(), 1024);
+        assert_eq!(cache.count, 1025);
+        
+        // Index 0 should now contain the new string
+        if let Some(s) = cache.get(0) {
+            assert_eq!(s, "new_string_0");
+        }
+        
+        // Index 1 should still contain original
+        if let Some(s) = cache.get(1) {
+            assert_eq!(s, "string_1");
+        }
+        
+        // Add another - should overwrite index 1
+        cache.intern(Cow::Owned("new_string_1".to_string()));
+        
+        assert_eq!(cache.count, 1026);
+        if let Some(s) = cache.get(1) {
+            assert_eq!(s, "new_string_1");
+        }
+        
+        // Index 2 should still be original
+        if let Some(s) = cache.get(2) {
+            assert_eq!(s, "string_2");
+        }
     }
 }
