@@ -583,7 +583,7 @@ where
     }
 }
 
-impl<'de, 'a, R> serde::Deserializer<'de> for &'a mut Deserializer<'de, R>
+impl<'de, R> serde::Deserializer<'de> for &mut Deserializer<'de, R>
 where
     R: Read<'de>,
 {

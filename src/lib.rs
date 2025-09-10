@@ -8,17 +8,17 @@
 //! Smile defines several optional features that can be enabled or disabled during serialization:
 //!
 //! * [`Builder::raw_binary`]: If enabled, binary data will be encoded directly as "raw" bytes, rather than using
-//!     Smile's 7-bit "safe" encoding. The raw format is 14% smaller and faster to serialize and deserialize, but usage
-//!     means that encoded values may contain Smile control characters such as the end-of-stream token `0xff`. Disabled
-//!     by default.
+//!   Smile's 7-bit "safe" encoding. The raw format is 14% smaller and faster to serialize and deserialize, but usage
+//!   means that encoded values may contain Smile control characters such as the end-of-stream token `0xff`. Disabled
+//!   by default.
 //! * [`Builder::shared_strings`]: If enabled, string values 64 bytes and smaller will be deduplicated in the encoded
-//!     format. This increases the memory overhead of serialization and deserialization, but can significantly shrink
-//!     the size of the encoded value when strings are repeated. Disabled by default.
+//!   format. This increases the memory overhead of serialization and deserialization, but can significantly shrink
+//!   the size of the encoded value when strings are repeated. Disabled by default.
 //! * [`Builder::shared_properties`]: If enabled, map keys 64 bytes and smaller will be deduplicated in the encoded
-//!     format. This increases the memory overhead of serialization and deserialization, but can significantly shrink
-//!     the size of the encoded value when keys are repeated (particularly struct field names). Enabled by default.
+//!   format. This increases the memory overhead of serialization and deserialization, but can significantly shrink
+//!   the size of the encoded value when keys are repeated (particularly struct field names). Enabled by default.
 //! * [`Serializer::end`]: A sequence of Smile values can optionally be terminated by the end-of-stream token `0xff`.
-//!     Calling this method will write the token into the output stream.
+//!   Calling this method will write the token into the output stream.
 //!
 //! # Special Types
 //!
