@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-const LIMIT: usize = 1024;
+const LIMIT: usize = 4096;
 
 pub struct StringCache<'de> {
     vec: Vec<Cow<'de, str>>,
