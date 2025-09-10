@@ -377,7 +377,7 @@ where
     // https://github.com/FasterXML/jackson-dataformats-binary/issues/300
     fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
         self.write_header()?;
-        let bits = v.to_bits() as i32;
+        let bits = v.to_bits();
         let buf = [
             0x28,
             (bits >> 28) as u8 & 0x7f,

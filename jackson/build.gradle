@@ -7,8 +7,8 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.13.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.0'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.20.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
 }
 
 application {
