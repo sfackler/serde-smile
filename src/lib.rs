@@ -14,15 +14,15 @@
 //! * [`Builder::shared_strings`]: If enabled, string values 64 bytes and smaller will be deduplicated in the encoded
 //!   format. This increases the memory overhead of serialization and deserialization, but can significantly shrink
 //!   the size of the encoded value when strings are repeated. Disabled by default.
-//! * [`Builder::shared_properties`]: If enabled, map keys 64 bytes and smaller will be deduplicated in the encoded
-//!   format. This increases the memory overhead of serialization and deserialization, but can significantly shrink
-//!   the size of the encoded value when keys are repeated (particularly struct field names). Enabled by default.
+//! * [`Builder::shared_properties`]: If enabled, map keys will be deduplicated in the encoded format. This increases
+//!   the memory overhead of serialization and deserialization, but can significantly shrink the size of the encoded
+//!   value when keys are repeated (particularly struct field names). Enabled by default.
 //! * [`Serializer::end`]: A sequence of Smile values can optionally be terminated by the end-of-stream token `0xff`.
 //!   Calling this method will write the token into the output stream.
 //!
 //! # Special Types
 //!
-//! Smile supports two kinds of values that Serde does not natively handle: arbitrary precision integer and decimals.
+//! Smile supports two kinds of values that Serde does not natively handle: arbitrary precision integers and decimals.
 //! This crate defines special types [`BigInteger`] and [`BigDecimal`] which will serialize to and deserialize from
 //! their respective Smile types. However, they should only be used with the serializers and deserializers defined
 //! within this crate as they will produce nonsensical values when used with other Serde libraries.
