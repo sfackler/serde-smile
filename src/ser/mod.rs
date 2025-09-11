@@ -373,8 +373,6 @@ where
         }
     }
 
-    // to match with the Java implementation, we encode floats with sign extension and doubles without!
-    // https://github.com/FasterXML/jackson-dataformats-binary/issues/300
     fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
         self.write_header()?;
         let bits = v.to_bits();
