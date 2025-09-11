@@ -8,3 +8,4 @@ def test(n, name):
 test([{"1": "a", "2": "b"} for i in range(10)], "ab")
 test([{"1": str(i)} for i in range(100)] * 2, "large")
 test([{"1": "repeated", "2": str(i)} for i in range(1300)], "evict")
+test([{"a": str(i), "b": str(i + 1)} for i in range(1300)], "valid_back_refs")
