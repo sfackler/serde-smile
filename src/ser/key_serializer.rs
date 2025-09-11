@@ -29,10 +29,6 @@ where
             None => return Ok(false),
         };
 
-        if v.len() > 64 {
-            return Ok(false);
-        }
-
         match shared_properties.get(&v) {
             Some(backref) => {
                 if backref <= 63 {

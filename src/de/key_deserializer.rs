@@ -46,20 +46,16 @@ where
         match buf {
             Buf::Short(buf) => {
                 let s = str::from_utf8(buf).map_err(|_| Error::invalid_utf8())?;
-                if s.len() <= 64 {
-                    if let Some(shared_properties) = &mut self.de.shared_properties {
-                        shared_properties.intern(Cow::Owned(s.to_string()));
-                    }
+                if let Some(shared_properties) = &mut self.de.shared_properties {
+                    shared_properties.intern(Cow::Owned(s.to_string()));
                 }
 
                 Ok(Str::Short(s))
             }
             Buf::Long(buf) => {
                 let s = str::from_utf8(buf).map_err(|_| Error::invalid_utf8())?;
-                if s.len() <= 64 {
-                    if let Some(shared_properties) = &mut self.de.shared_properties {
-                        shared_properties.intern(Cow::Borrowed(s));
-                    }
+                if let Some(shared_properties) = &mut self.de.shared_properties {
+                    shared_properties.intern(Cow::Borrowed(s));
                 }
 
                 Ok(Str::Long(s))
