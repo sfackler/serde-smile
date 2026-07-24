@@ -1,7 +1,7 @@
 use crate::ser::Serializer;
 use crate::Error;
 use serde::ser::Impossible;
-use serde::{serde_if_integer128, Serialize, Serializer as _};
+use serde::{Serialize, Serializer as _};
 use std::borrow::Cow;
 use std::io::Write;
 use std::ops::Deref;
@@ -129,10 +129,8 @@ where
         self.serialize_int(v)
     }
 
-    serde_if_integer128! {
-        fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
-            self.serialize_int(v)
-        }
+    fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
+        self.serialize_int(v)
     }
 
     fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error> {
@@ -151,10 +149,8 @@ where
         self.serialize_int(v)
     }
 
-    serde_if_integer128! {
-        fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
-            self.serialize_int(v)
-        }
+    fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
+        self.serialize_int(v)
     }
 
     fn serialize_f32(self, _v: f32) -> Result<Self::Ok, Self::Error> {

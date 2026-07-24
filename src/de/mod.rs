@@ -9,7 +9,7 @@ use crate::de::string_cache::StringCache;
 use crate::value::{BigDecimal, BigInteger};
 use crate::Error;
 use serde::de::{self, DeserializeOwned, Visitor};
-use serde::{serde_if_integer128, Deserialize, Deserializer as _};
+use serde::{Deserialize, Deserializer as _};
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::io::BufRead;
@@ -347,22 +347,20 @@ where
             return visitor.visit_u64(v);
         }
 
-        serde_if_integer128! {
-            if buf.len() <= 16 {
-                let mut out = [0; 16];
-                let (extra, number) = out.split_at_mut(16 - buf.len());
-                number.copy_from_slice(&buf);
-                self.sign_extend(extra, number);
-                let v = i128::from_be_bytes(out);
-                return visitor.visit_i128(v);
-            }
+        if buf.len() <= 16 {
+            let mut out = [0; 16];
+            let (extra, number) = out.split_at_mut(16 - buf.len());
+            number.copy_from_slice(&buf);
+            self.sign_extend(extra, number);
+            let v = i128::from_be_bytes(out);
+            return visitor.visit_i128(v);
+        }
 
-            if buf.len() == 17 && buf[0] == 0 {
-                let mut out = [0; 16];
-                out.copy_from_slice(&buf[1..]);
-                let v = u128::from_be_bytes(out);
-                return visitor.visit_u128(v);
-            }
+        if buf.len() == 17 && buf[0] == 0 {
+            let mut out = [0; 16];
+            out.copy_from_slice(&buf[1..]);
+            let v = u128::from_be_bytes(out);
+            return visitor.visit_u128(v);
         }
 
         visitor.visit_map(BigIntegerDeserializer { buf: Some(buf) })

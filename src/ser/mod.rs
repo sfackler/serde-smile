@@ -5,7 +5,7 @@ use crate::ser::string_cache::StringCache;
 use crate::value::{BigDecimal, BigInteger};
 use crate::Error;
 use serde::ser::SerializeStruct;
-use serde::{serde_if_integer128, Serialize};
+use serde::Serialize;
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::io::Write;
@@ -326,12 +326,10 @@ where
         }
     }
 
-    serde_if_integer128! {
-        fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
-            match i64::try_from(v) {
-                Ok(v) => self.serialize_i64(v),
-                Err(_) => self.serialize_big_integer(&v.to_be_bytes()),
-            }
+    fn serialize_i128(self, v: i128) -> Result<Self::Ok, Self::Error> {
+        match i64::try_from(v) {
+            Ok(v) => self.serialize_i64(v),
+            Err(_) => self.serialize_big_integer(&v.to_be_bytes()),
         }
     }
 
@@ -359,16 +357,14 @@ where
         }
     }
 
-    serde_if_integer128! {
-        fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
-            match i128::try_from(v) {
-                Ok(v) => self.serialize_i128(v),
-                Err(_) => {
-                    // we need an extra byte for the sign bit
-                    let mut buf = [0; 17];
-                    buf[1..].copy_from_slice(&v.to_be_bytes());
-                    self.serialize_big_integer(&buf)
-                }
+    fn serialize_u128(self, v: u128) -> Result<Self::Ok, Self::Error> {
+        match i128::try_from(v) {
+            Ok(v) => self.serialize_i128(v),
+            Err(_) => {
+                // we need an extra byte for the sign bit
+                let mut buf = [0; 17];
+                buf[1..].copy_from_slice(&v.to_be_bytes());
+                self.serialize_big_integer(&buf)
             }
         }
     }
